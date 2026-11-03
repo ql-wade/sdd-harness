@@ -94,23 +94,22 @@ record-outcome 载荷再提交。前提：claim 必须来自带 `--session-id`�
 entries**（每门一条 secret，工具自动保留前面门的条目）——手工覆盖成单条目会让
 outcome sweep 重准录先前门时 FORGED_COLLECTION 卡死整个 Run（r3 实证，别手改）。
 
-> **A 门协议要点（sdd-test r2/r4 实证）**：design handoff 的 outcome 必须携带
-> `sourceEvidence` + `requirementsEvidence`（open 证据回执）——官方执行器自动带；
-> 手工构造用 `node tools/design-handoff.mjs --project "$PWD" --change my-change`
-> （自动补齐双回执）。缺 `requirementsEvidence` → design.md 被字节锁死，任何改动
-> （哪怕只修 frontmatter 的 `comet_change`）都会报 `Classic Design handoff has changed`。
-> **卡住的合法续行**：`comet state revise-design <change> --expected-revision <rev>`
-> → propose → approve → 循环重放（handoff 重录时带上双回执）。
-> design.md 的 frontmatter `comet_change` 必须与 change 名一致——在 handoff 之前修正。
->
-> **design.md 冻结点 = design.evidence 提交时刻（r4 实证，app-owned 无修订重开）**：
-> evidence 一旦受理，sweep 永远按已录 contentHash 重验（runtime :835 无条件相等），
-> 共识评审再要求修订也无处重证——三条路全死：`revise-design`（app-owned 被组合检查拒）、
-> `invalidate-evidence`（已解决等待不可作废）、重交 outcome（旧哈希固化）。
-> `revise-wait` 只作用于 pending 的 proposal 确认等待，不管已解决的证据等待。
-> **所以：把共识评审的迭代做在 design.evidence 提交之前**（预审迭代定稿 →
-> evidence = 定稿签名 → 正式 consensus 步对定稿全票 → A 束一次过）。
-> 上游修复请求已登记（HANDOFF）：design 证据重开 op / sweep 双回执口径 / 步序调整。
+> **门内修订的通用机制（每个门内建，R/A 实证）**：workflow 契约里每个扩展门的
+> verdict 词汇都是 `pass / repair / revise-requirements`。录
+> `verdict:'revise-requirements'` → 运行时重置 designDoc/plan/handoffContext +
+> phase:open → **同一 Run 从 composition.prepare 全旅程重放**（classic-application.js:386-404），
+> 修订后的工件在重放中重新 handoff（`tools/design-handoff.mjs` 双回执）→ 重新
+> document/evidence（新哈希）→ 正式 consensus → A 束一次过。修订 outcome 载荷免束：
+> `node tools/gate-bundle.mjs --project "$PWD" --gate A --verdict revise-requirements \
+>   --action my-change:N --claim <claim.json> --reason "consensus revisions"`。
+> **已过扩展门之后需要修订**（如 build 相位 claim 被 sweep 拒，r6 实证）——走 workflow 命令门，
+> 无需在手动作：`node tools/gate-bundle.mjs --project "$PWD" --gate A --verdict \
+>   revise-requirements --claim <claim.json>` 产出 dispatch-command 请求文件 →
+> `comet runtime dispatch --application sdd-managed-delivery --project-root "$PWD" \
+>   --request .sdd/delivery/gates/a-revise-command.json --json`。
+> 单次循环内 evidence 提交后 design.md 仍冻结——要改就走 revise 重放，**不要手工碰哈希**：
+> `revise-design`（app-owned 被组合检查拒）、`invalidate-evidence`（已解决等待不可作废）、
+> 重交同哈希 outcome（永久拒）三条手工路径确认死路（r4 实证）。
 > 你只需要在弹出等待时做决策：
 
 | 门 | 阶段 | 你的决策 | 你批准什么 | 交付物（阶段结束时的文件） |

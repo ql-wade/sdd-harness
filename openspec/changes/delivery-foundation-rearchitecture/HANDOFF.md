@@ -99,3 +99,18 @@ revise-wait 仅作用 pending proposal 确认等待。allowDesignDocumentChanges
 采用 allowDesignDocumentChanges 口径比较；composition 步序调整（consensus 先于 evidence）。
 r4 处置建议已答复实例：r4 无在手 claim 弃 Run 成本低，推荐 r5 按 evidence-last 时序重跑
 （预审迭代定稿 → evidence=定稿签名 → 正式 consensus 全票 → A 束一次过）。
+
+## 2026-11-03（第七批）：r6 build 相位 sweep 卡点诊断 + revise 命令门固化（bug#5 家族收官）
+
+r6 实证（纯沙箱新数据根正序执行，R/A/T 全真束通过）：build.configure claim 被
+「Classic 设计来源已变化」拒。诊断（逐源）：守卫重算三源哈希对比 handoff 快照，
+实例还原的 tasks.md 正确，真正变化的源是 **design.md**（共识批准的修订字节）——
+build 相位无 allowDesignDocumentChanges 豁免，手工哈希手术无解（设计如此：证据钉字节）。
+**合法续行 = workflow 命令门**（运行时错误信息 :516 早已点名）：dispatch-command
+{name:'revise-requirements'} → classic.composition.revise → designDoc/plan/handoffContext
+重置 + phase:open → 同一 Run 全旅程重放（classic-application.js:386-404）。
+gate-bundle 新增 --verdict 修订模式：直接产出 dispatch-command 请求文件（无需在手动作）。
+RUNBOOK 补两条修订门（扩展动作在手录 verdict / 已过扩展门走命令）。
+上游定性修正：非「缺能力缺口」——重放机制上游原生支持；缺的是错误信息到操作面的
+文档桥（本轮已固化）。上游三项改进请求维持登记（体验优化）。
+r6 处置：执行 revise 命令重放（R/A/T 束可按 entries 快速复验，consensus 3/3 复核即过）。

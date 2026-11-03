@@ -1,0 +1,54 @@
+# hooks.yaml — 控制平面策略源（中立格式）
+#
+# 一次定义，各 agent adapter 落地为原生配置：
+#   Claude Code: tools/adapters/claude-code.sh → .claude/settings.json + hooks/.compiled.env
+#
+# hook 取值: PreToolUse | PostToolUse | SessionStart | Stop | PreCompact | SubagentStop
+# action:   deny（硬拦截，exit 2）| warn（提示，exit 0）| run（执行脚本，stdout 进上下文）
+#
+# ⚠️ 局限（如实声明）：deny 匹配是子串/前缀匹配，best-effort 防线而非沙箱——
+#    引号拼接、变量展开、base64 等变形可绕过模式（如 'git push  --force' 双空格）。
+#    硬安全边界仍是 agent 权限系统与人工审查；本清单的定位是"让 agent 在危险边
+#    缘停下来被看见"，不是对抗性防御。
+
+policies:
+  # ---- 约束（PreToolUse 拦截）----
+
+  - id: kb-write-protection
+    hook: PreToolUse
+    matcher: Write|Edit|MultiEdit|NotebookEdit
+    action: deny
+    target:
+      # canonical 落点：llmwiki 注册把 wiki 内容落在 $SDD_HOME/wiki/<slug>/wiki/
+      # （默认 $HOME/.sdd → '.sdd/wiki/<slug>/wiki/'）——I04 实证旧子串
+      # 'llmwiki/wiki/' 不覆盖该落点（合成直写 exit 0 放行），由 P1_2 修复
+      # （ledger I04_EVIDENCE_RECORDED_HOOK_GAP_ROUTED）。语义只收紧：
+      # deny / fail-closed 不变，旧子串保留。
+      - ".sdd/wiki/"
+      - "llmwiki/wiki/"
+    message: "直接写知识库 wiki/ 会绕过索引（SQLite+FTS），必须走 mcp__llmwiki__create / edit / append"
+
+  - id: dangerous-command-blocklist
+    hook: PreToolUse
+    matcher: Bash
+    action: deny
+    patterns:
+      - "git push --force"
+      - "git push -f"
+      - "git reset --hard"
+      - "rm -rf /"
+      - "DROP TABLE"
+      - "DROP DATABASE"
+    message: "破坏性命令在团队禁入清单，确需执行请人工操作"
+
+  # ---- 触发（SessionStart / Stop 注入）----
+
+  - id: session-context-injection
+    hook: SessionStart
+    action: run
+    script: hooks/session-context.sh
+
+  - id: stop-sediment-reminder
+    hook: Stop
+    action: run
+    script: hooks/stop-reminder.sh
