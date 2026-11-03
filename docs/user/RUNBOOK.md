@@ -147,8 +147,16 @@ outcome sweep 重准录先前门时 FORGED_COLLECTION 卡死整个 Run（r3 实�
 > ③ T 门束构造（gate-bundle `--gate T --test-contract <file> [--feature-map features.md]`）：
 > 构造期机械复验（盘上 pack digest / 投影重算深比较含矩阵 / 矩阵专属条目 digest），
 > **三 ref 快照**（束 + test-pack.snapshot + test-contract.snapshot）写 `.sdd/delivery/gates/t/`
-> 并入 outcome artifactHashes——record 期 sweep 逐条哈希比对。**`--test-contract` 仅 T 门
-> 接受**（其余门传入即拒，拒收落在构造期）。KB 纳管：发布 llmwiki 后落
+> 并入 outcome artifactHashes。**篡改检测分两段**：构造期拒的是 **② 盘上产物**篡改
+> （改 `tests/` 下 pack/config 再 `--check-only` 必拒）；**.sdd 三 ref 快照**的篡改检测
+> 在 **record 期 sweep**（逐条哈希比对，需活 Run 提交时触发）。投影约定：② 产物一律由
+> compile-domain-cases CLI 产出（CLI 注入 DOMAIN-CONFIG 绑定 ② config 字节，构造期复验
+> 与 V 重算同式复刻该装配）——勿用进程内直编译产物混入 ②。
+> **`--test-contract` 仅 T 门接受**（其余门传入即拒，拒收落在构造期）。
+> **V/Kp 契约来源 = T 快照链同源重构**：V/Kp 构造前必须已有
+> `.sdd/delivery/gates/t/test-contract.snapshot.json`（T 构造落盘）——缺席即构造期
+> 响亮拒（先完成 T），畸形亦拒；快照自动注入 `inputs.testContract`，无需也不得传旗标。
+> KB 纳管：发布 llmwiki 后落
 > `.sdd/delivery/gates/t/kb-publish-receipt.json`（非强制；在场则校验 Run 绑定 + 正本
 > digest，比对脚本 `tools/test-cases/verify-kb-receipt.mjs`；llmwiki MCP 恢复前页读回
 > 用人工导出文件）。

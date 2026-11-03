@@ -198,6 +198,8 @@ test('V promotion derives every field from source recomputation and real-record 
     self_checks: [{ caseId: 'TC-READ-1', testId: 'read-item-test', execution: authorThread, principal: authorThread,
       outcome: 'pass', executions: { total: 1, valid: 1 }, evidenceRefs: [{ ref: locator, digest: measuredDigest }] }] };
   fs.writeFileSync(nodePath.join(root, changeDir, 'tests', 'domain-cases.config.json'), JSON.stringify(config));
+  // 规范投影约定：CLI 注入 DOMAIN-CONFIG 绑定 ② config 字节（host-ports 重算同式复刻）
+  config.basis.push({ id: 'DOMAIN-CONFIG', kind: 'source', path: `${changeDir}/tests/domain-cases.config.json` });
   const projection = compileDomainCases({ projectRoot: root, caseFile: `${changeDir}/tests/domain-cases.md`, config });
   const contract = projection.testContract;
   const binding = { rootThreadId: builderThread, parentTurnId: UUID2, childThreadId: reviewerThread, childTurnId: UUID2,
@@ -442,6 +444,8 @@ test('verifyDomainAutomation re-validates from the archived change copy after th
     self_checks: [{ caseId: 'TC-READ-1', testId: 'read-item-test', execution: authorThread, principal: authorThread,
       outcome: 'pass', executions: { total: 1, valid: 1 }, evidenceRefs: [{ ref: locator, digest: measuredDigest }] }] };
   fs.writeFileSync(nodePath.join(root, changeDir, 'tests', 'domain-cases.config.json'), JSON.stringify(config));
+  // 规范投影约定：CLI 注入 DOMAIN-CONFIG 绑定 ② config 字节（host-ports 重算同式复刻）
+  config.basis.push({ id: 'DOMAIN-CONFIG', kind: 'source', path: `${changeDir}/tests/domain-cases.config.json` });
   const projection = compileDomainCases({ projectRoot: root, caseFile: `${changeDir}/tests/domain-cases.md`, config });
   const contract = projection.testContract;
   const binding = { rootThreadId: builderThread, parentTurnId: UUID2, childThreadId: reviewerThread, childTurnId: UUID2,
@@ -528,6 +532,8 @@ test('V promotion recomputes through the ①+② two-layer config merge', async 
       outcome: 'pass', executions: { total: 1, valid: 1 }, evidenceRefs: [{ ref: locator, digest: measuredDigest }] }] };
   fs.writeFileSync(nodePath.join(root, 'tests', 'domain-cases', 'domain-cases.config.json'), JSON.stringify(library));
   fs.writeFileSync(nodePath.join(root, changeDir, 'tests', 'domain-cases.config.json'), JSON.stringify(changeConfig));
+  // 规范投影约定：CLI 注入 DOMAIN-CONFIG 绑定 ② config 字节（host-ports 重算同式复刻）
+  changeConfig.basis.push({ id: 'DOMAIN-CONFIG', kind: 'source', path: `${changeDir}/tests/domain-cases.config.json` });
   const projection = compileDomainCases({ projectRoot: root, caseFile: `${changeDir}/tests/domain-cases.md`,
     config: mergeDomainCaseConfigs(library, changeConfig) });
   const contract = projection.testContract;

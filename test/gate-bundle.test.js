@@ -4,6 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { envelopeDigest } from '../lib/delivery/evidence.js';
 
 // gate-bundle.mjs 固化回归（sdd-test 实例 R 门实证配方的框架化，2026-11-02）。
 // 实证范围：R 门全流程（rev37）；本文件覆盖确定性/映射/解析器/参数纪律，
@@ -296,8 +297,11 @@ function tFixture() {
   fs.mkdirSync(path.join(root, 'tests/domain-cases'), { recursive: true });
   fs.writeFileSync(path.join(root, 'tests/domain-cases/domain-cases.config.json'), JSON.stringify(library));
   fs.writeFileSync(path.join(root, 'openspec/changes/t-change/tests/domain-cases.config.json'), JSON.stringify(change));
+  const mergedConfig = mergeDomainCaseConfigs(library, change);
+  // 规范投影约定：CLI 注入 DOMAIN-CONFIG 绑定 ② config 字节——进程内夹具复刻同一装配
+  mergedConfig.basis.push({ id: 'DOMAIN-CONFIG', kind: 'source', path: 'openspec/changes/t-change/tests/domain-cases.config.json' });
   const result = compileDomainCases({ projectRoot: root, caseFile: 'openspec/changes/t-change/tests/domain-cases.md',
-    config: mergeDomainCaseConfigs(library, change) });
+    config: mergedConfig });
   fs.writeFileSync(path.join(root, 'openspec/changes/t-change/tests/test-pack.json'), JSON.stringify(result.testPack));
   const contractPath = path.join(root, 'openspec/changes/t-change/tests/test-contract.json');
   fs.writeFileSync(contractPath, JSON.stringify(result.testContract));
@@ -425,5 +429,103 @@ test('kb-receipt compare script: valid receipt + page read-back pass, tampered p
     const wrongRun = spawnSync('node', [cli, '--project', f.root, '--run-id', 'other-run'], { encoding: 'utf8' });
     assert.equal(wrongRun.status, 1);
     assert.match(wrongRun.stderr, /绑定失配/);
+  } finally { f.dispose(); }
+});
+
+// ---- 四轮验证 finding 1/4/5：V/Kp 契约注入（T 快照链 → inputs.testContract）----
+
+function vkFixture(gate) {
+  const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), `sdd-gate-bundle-${gate.toLowerCase()}-`)));
+  fs.mkdirSync(path.join(root, 'openspec/changes/vk-change'), { recursive: true });
+  fs.writeFileSync(path.join(root, 'openspec/changes/vk-change/proposal.md'), '# vk\n');
+  const stepId = gate === 'V' ? 'classic.extension.verify-whitebox' : 'classic.extension.knowledge-project-closeout';
+  const actionInput = { gate, runId: 'vk-change', change: 'vk-change', changeDir: 'openspec/changes/vk-change' };
+  const claim = { run: { current: { runId: 'vk-change', revision: 1, phase: 'verify',
+    actions: [{ id: 'vk-change:1', stepId, status: 'running', input: actionInput, inputHash: envelopeDigest(actionInput),
+      claim: { executorId: 'sdd-managed-skill-host', sessionId: '55555555-5555-4555-8555-555555555555', token: 'tok' } }] } } };
+  fs.writeFileSync(path.join(root, 'claim.json'), JSON.stringify(claim));
+  fs.writeFileSync(path.join(root, 'ev.json'), JSON.stringify({ contentHash: '9'.repeat(64) }));
+  fs.writeFileSync(path.join(root, 'reviewer.jsonl'), 'transcript');
+  fs.writeFileSync(path.join(root, 'args.json'), JSON.stringify({
+    reviewerTranscript: path.join(root, 'reviewer.jsonl'), reviewerId: 'agent-vk',
+    statement: 'statement', hostSession: '66666666-6666-4666-8666-666666666666', taskIds: ['1.1'],
+  }));
+  const appDir = path.join(root, '.comet/applications/sdd-managed-delivery/versions/1');
+  const skill = gate === 'V' ? 'whitebox-verify' : 'openspec-lifecycle-guard';
+  fs.mkdirSync(path.join(appDir, 'skills', skill), { recursive: true });
+  fs.writeFileSync(path.join(appDir, 'skills', skill, 'SKILL.md'), `name: ${skill}\nversion: 1.0.0\n`);
+  fs.writeFileSync(path.join(appDir, 'application.json'), JSON.stringify({ contentHash: 'd'.repeat(64), runtimeVersion: '0.5.1' }));
+  return { root, dispose: () => fs.rmSync(root, { recursive: true, force: true }) };
+}
+
+test('V/Kp construction sources inputs.testContract from the T snapshot chain (matrix: flag refused, snapshot mandatory)', async () => {
+  for (const gate of ['V', 'Kp']) {
+    const f = vkFixture(gate);
+    try {
+      // 快照缺席 → 构造期响亮拒，且 authority 不得先落盘
+      await assert.rejects(() => tool.buildGateBundle({
+        gate, action: 'vk-change:1', claim: path.join(f.root, 'claim.json'),
+        openEvidence: path.join(f.root, 'ev.json'), args: path.join(f.root, 'args.json'),
+        project: f.root, identity: { contentHash: 'd'.repeat(64), runtimeVersion: '0.5.1' },
+      }, { now: () => '2026-11-03T00:00:00.000Z', clock: () => 1793664000000 }),
+        /先完成 T 门构造/, `${gate} 缺 T 快照必须构造期响亮拒（不许静默跳过）`);
+      assert.equal(fs.existsSync(path.join(f.root, 'openspec/changes/vk-change/.comet/delivery-authority.json')), false,
+        '拒绝路径不得先落盘 authority entry');
+      // 快照在场 → gate.js:72 parse 通过，止于语义裁决（GATE BLOCKED），不再是 INVALID_TEST_CONTRACT
+      const tf = tFixture();
+      const contractSource = compileDomainCases({ projectRoot: tf.root,
+        caseFile: 'openspec/changes/t-change/tests/domain-cases.md',
+        config: mergeDomainCaseConfigs(
+          JSON.parse(fs.readFileSync(path.join(tf.root, 'tests/domain-cases/domain-cases.config.json'), 'utf8')),
+          JSON.parse(fs.readFileSync(path.join(tf.root, 'openspec/changes/t-change/tests/domain-cases.config.json'), 'utf8'))) });
+      fs.mkdirSync(path.join(f.root, '.sdd/delivery/gates/t'), { recursive: true });
+      fs.writeFileSync(path.join(f.root, '.sdd/delivery/gates/t/test-contract.snapshot.json'),
+        JSON.stringify(contractSource.testContract));
+      tf.dispose();
+      await assert.rejects(() => tool.buildGateBundle({
+        gate, action: 'vk-change:1', claim: path.join(f.root, 'claim.json'),
+        openEvidence: path.join(f.root, 'ev.json'), args: path.join(f.root, 'args.json'),
+        project: f.root, identity: { contentHash: 'd'.repeat(64), runtimeVersion: '0.5.1' },
+      }, { now: () => '2026-11-03T00:00:00.000Z', clock: () => 1793664000000 }), (error) => {
+        assert.match(error.message, /GATE BLOCKED/, `${gate} 快照在场必须过 parse、止于语义裁决`);
+        assert.doesNotMatch(error.message, /INVALID_TEST_CONTRACT/, `${gate} 不得再死锁在契约缺席`);
+        return true;
+      });
+      // 快照畸形 → 构造期响亮拒
+      fs.writeFileSync(path.join(f.root, '.sdd/delivery/gates/t/test-contract.snapshot.json'), '{ broken');
+      await assert.rejects(() => tool.buildGateBundle({
+        gate, action: 'vk-change:1', claim: path.join(f.root, 'claim.json'),
+        openEvidence: path.join(f.root, 'ev.json'), args: path.join(f.root, 'args.json'),
+        project: f.root, identity: { contentHash: 'd'.repeat(64), runtimeVersion: '0.5.1' },
+      }, { now: () => '2026-11-03T00:00:00.000Z', clock: () => 1793664000000 }), /不可解析/);
+    } finally { f.dispose(); }
+  }
+});
+
+// ---- 四轮验证 finding 2：CLI 投影 → 构造复验 seam（RUNBOOK ②→③ 文档链）----
+// CLI 会向 config.basis 注入 DOMAIN-CONFIG（绑定 ② config 字节）；构造期重算必须复刻
+// 同一装配，否则盘上 pack 永远多一条 DOMAIN-CONFIG，(b) 深比较永拒——文档链断裂。
+
+test('CLI-projected ② artifacts pass T construction re-verification (RUNBOOK chain end-to-end)', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const f = tFixture();
+  try {
+    // RUNBOOK 流：①+② 合并写入 ② 锚点 → CLI --config ② → --view testpack/contract 落盘
+    const library = JSON.parse(fs.readFileSync(path.join(f.root, 'tests/domain-cases/domain-cases.config.json'), 'utf8'));
+    const config2Path = path.join(f.root, 'openspec/changes/t-change/tests/domain-cases.config.json');
+    const merged = mergeDomainCaseConfigs(library, JSON.parse(fs.readFileSync(config2Path, 'utf8')));
+    fs.writeFileSync(config2Path, JSON.stringify(merged));
+    const cli = path.join(repoRoot, 'tools', 'test-cases', 'compile-domain-cases.mjs');
+    const common = ['--project', f.root, '--cases', 'openspec/changes/t-change/tests/domain-cases.md', '--config', 'openspec/changes/t-change/tests/domain-cases.config.json'];
+    const packRun = spawnSync('node', [cli, ...common, '--view', 'testpack'], { encoding: 'utf8', cwd: f.root });
+    assert.equal(packRun.status, 0, packRun.stderr);
+    fs.writeFileSync(path.join(f.root, 'openspec/changes/t-change/tests/test-pack.json'), packRun.stdout);
+    const contractRun = spawnSync('node', [cli, ...common, '--view', 'contract'], { encoding: 'utf8', cwd: f.root });
+    assert.equal(contractRun.status, 0, contractRun.stderr);
+    const contractPath = path.join(f.root, 'openspec/changes/t-change/tests/test-contract.json');
+    fs.writeFileSync(contractPath, contractRun.stdout);
+    const evidence = await tool.buildTConstructionEvidence({ project: f.root, runId: 't-change', testContractPath: contractPath });
+    assert.match(evidence.contractDigest, /^[a-f0-9]{64}$/, 'CLI 投影产物必须通过构造期四件复验');
+    assert.equal(JSON.parse(evidence.snapshotFiles[0].bytes.toString('utf8')).cases[0].id, 'TC-READ-1');
   } finally { f.dispose(); }
 });
