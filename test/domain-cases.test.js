@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { spawnSync } from 'node:child_process';
-import { compileDomainCases, verifyDomainCaseProjection } from '../lib/delivery/domain-cases.js';
+import { compileDomainCases, verifyDomainCaseProjection, mergeDomainCaseConfigs } from '../lib/delivery/domain-cases.js';
 import { parseContract } from '../contracts/delivery/index.js';
 import { evaluate } from '../lib/delivery/gate.js';
 
@@ -360,5 +360,70 @@ test('unresolved design remains a valid design-only pack but cannot generate a r
     const validated = spawnSync('python3', [validator, file, '--project-root', f.root], { encoding: 'utf8' });
     assert.equal(validated.status, 0, validated.stderr);
     assert.throws(() => compileDomainCases({ projectRoot: f.root, caseFile: 'cases.md', config: { ...config, mode: 'automate' } }), /DOMAIN_CASES_INVALID/);
+  } finally { f.dispose(); }
+});
+
+// ---- v2.5 AC-1：两层 config 合并（① 库级基底 + ② 变更级覆盖，basis id 并集） ----
+
+function layeredFixture() {
+  const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'domain-cases-layered-')));
+  fs.writeFileSync(path.join(root, 'features.md'), '# Features\nF-REQ-1: read item\n');
+  fs.writeFileSync(path.join(root, 'design.md'), '# Design\nRead is performed through the public API.\n');
+  fs.writeFileSync(path.join(root, 'cases.md'), `<!-- domain-cases/v1 -->\n# Domain cases\n\n### TC-READ-1 — Read item\n\n- **Requirement IDs**: F-REQ-1\n- **Acceptance**: AC-1\n- **Dimensions**: Journey-A\n- **Level**: api\n- **Priority**: P1\n- **Precondition**: User is permitted\n- **Input**: Item exists\n- **Step**: Request the item\n- **Expected**: The item is returned\n- **Oracle basis**: F-REQ-1\n- **Oracle authority**: Public API response\n- **Cleanup**: Remove fixture data\n- **Evidence**: Request and response\n- **Check ID**: read-item\n`);
+  const library = {
+    basis: [{ id: 'F-REQ-1', kind: 'requirement', path: 'features.md' }],
+    dimensions: Object.fromEntries('ABCDEFGHIJ'.split('').map(c => [`Journey-${c}`, {
+      required: c === 'A', reason: c === 'A' ? 'Required by F-REQ-1' : 'Not applicable', basis_ids: ['F-REQ-1'],
+    }])),
+  };
+  const change = {
+    project: 'change-side', change: 'fixture-change', mode: 'design', design_basis_id: 'DESIGN-1',
+    basis: [{ id: 'DESIGN-1', kind: 'source', path: 'design.md' }],
+    checks: [{ id: 'read-item', level: 'api', capability: 'api:read', command: 'node --test read.test.js' }],
+    cleanup: { environment: 'Dispose isolated process', data: 'Remove fixture data' },
+  };
+  return { root, library, change, dispose: () => fs.rmSync(root, { recursive: true, force: true }) };
+}
+
+test('two-layer merge: library F-ID basis and change design source compile together, F-ID enforcement survives', () => {
+  const f = layeredFixture();
+  try {
+    const merged = mergeDomainCaseConfigs(f.library, f.change);
+    const result = compileDomainCases({ projectRoot: f.root, caseFile: 'cases.md', config: merged });
+    assert.ok(result.testPack.basis.some(item => item.id === 'F-REQ-1'), '① F-ID 条目必须活过合并');
+    assert.ok(result.testPack.basis.some(item => item.id === 'DESIGN-1'), '② design source 必须在合并后在场');
+    assert.equal(result.testPack.requirements.includes('F-REQ-1'), true);
+    // 覆盖强制仍生效：再注册一个无 case 无 unresolved 的 F-ID，合并后投影必须拒绝
+    fs.appendFileSync(path.join(f.root, 'features.md'), 'F-REQ-2: write item\n');
+    const extended = mergeDomainCaseConfigs(
+      { ...f.library, basis: [...f.library.basis, { id: 'F-REQ-2', kind: 'requirement', path: 'features.md' }] }, f.change);
+    assert.throws(() => compileDomainCases({ projectRoot: f.root, caseFile: 'cases.md', config: extended }),
+      /every requirement needs a case or unresolved entry/, '合并不得摧毁 :160 per-F-ID 覆盖强制');
+  } finally { f.dispose(); }
+});
+
+test('two-layer merge: change-level fields win on conflict, basis ids unioned by id', () => {
+  const f = layeredFixture();
+  try {
+    const merged = mergeDomainCaseConfigs({ ...f.library, project: 'library-side' }, f.change);
+    assert.equal(merged.project, 'change-side', '身份字段冲突 ② 胜');
+    assert.equal(merged.change, 'fixture-change');
+    // basis id 并集：同 id 覆盖（② DESIGN-1 替换 ① 同名）、异 id 追加
+    const override = mergeDomainCaseConfigs(
+      { ...f.library, basis: [...f.library.basis, { id: 'DESIGN-1', kind: 'source', path: 'features.md' }] }, f.change);
+    const design = override.basis.filter(item => item.id === 'DESIGN-1');
+    assert.equal(design.length, 1, '同 id 条目以 ② 替换，不重复');
+    assert.equal(design[0].path, 'design.md');
+    assert.equal(override.basis.some(item => item.id === 'F-REQ-1'), true);
+  } finally { f.dispose(); }
+});
+
+test('two-layer merge: library config alone falls back unchanged (no invented change fields)', () => {
+  const f = layeredFixture();
+  try {
+    const merged = mergeDomainCaseConfigs(f.library, null);
+    assert.deepEqual(merged, f.library, '无 ② 时必须原样回落 ①，不得补造字段');
+    assert.throws(() => compileDomainCases({ projectRoot: f.root, caseFile: 'cases.md', config: merged }),
+      /DOMAIN_CASES_INVALID/, '仅 ① 回落是显式失败（缺 ② 身份/设计字段），不是静默成功');
   } finally { f.dispose(); }
 });
