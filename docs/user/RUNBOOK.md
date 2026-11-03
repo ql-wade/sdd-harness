@@ -94,6 +94,15 @@ record-outcome 载荷再提交。前提：claim 必须来自带 `--session-id`�
 entries**（每门一条 secret，工具自动保留前面门的条目）——手工覆盖成单条目会让
 outcome sweep 重准录先前门时 FORGED_COLLECTION 卡死整个 Run（r3 实证，别手改）。
 
+> **P 门配方（r7 实证）**：构造加 `--plan-bundle <planBundle.json>`（SDD.Delivery.PlanBundle，
+> schemaVersion 必填）——inputs 自动挂 planSources（tasks/dag 绑定），评审绑定自动携带
+> change/planDigest/tasksDigest/dagDigest（planGate 复检项）。canonical 计划契约：plan 单标记
+> `comet-task-authority` + 0 复选框 + 每 task `comet-task-ref`；tasks.md 每个 checkbox 须
+> `comet-task:<id>` 且 id 不含点（`1.1` 非法 → `1-1`）。
+> **evidence submissionId 官方配方**：`${change}:${kind}:epoch-${checkEpoch}:${evidenceId}:${sha256(ref\n+hash).slice(0,16)}`——跨 epoch 复用旧配方触发超级拒绝。
+> **评审者转录锚定**：必须在 `~/.claude/projects/` 下且名为 `<id>.jsonl` 或 `agent-<id>.jsonl`
+> （其他位置不被佐证）。宿主转录任意大小可佐证（流式扫描，无大小上限）。
+
 > **门内修订的通用机制（每个门内建，R/A 实证）**：workflow 契约里每个扩展门的
 > verdict 词汇都是 `pass / repair / revise-requirements`。录
 > `verdict:'revise-requirements'` → 运行时重置 designDoc/plan/handoffContext +
