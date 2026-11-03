@@ -62,9 +62,15 @@ checkpoint requires its original fixed Application package`）。误绑后无 CL
 ```bash
 $EDITOR openspec/changes/my-change/proposal.md
 ```
-写清：**Why**（为什么做）、**What Changes**（做什么）、**非目标**（明确不做什么）、
+写清：**Why**（为什么做）、**What Changes**（做什么）、**非目标**（明确不做的）、
 **验收**（怎么算完成）。写得越具体，后面五道门越顺。
 **跳过的后果**：需求确认门（R）会因为你自己的确认与文件不符而拒绝。
+
+> **双轨验收 AC 约定（§7 增补 A）**：每个特性（F-ID）的验收节写**两轨**——
+> ≥1 条**机制 AC**（可判定 pass/fail 的条件/度量/可执行 check）+ ≥1 条**体验 QC**
+> （GWT 单行为：Given/When/Then，Then 必须是可观察结果）。每条标注 verification route
+> （test / inspection）。写不出验证条件的条目显式 `unresolved`——散文混不过门。
+> 门只查存在性 + 可验证性，不查措辞完美（防 stage-gate 化）。
 
 ## 第 3 步：起 Run（通知质检经理开工）
 
@@ -132,6 +138,20 @@ outcome sweep 重准录先前门时 FORGED_COLLECTION 卡死整个 Run（r3 实�
 > **测试设计门（T）硬规则（升级版 test-authoring v1.1.0）**：用例先经 test-authoring 写入
 > **domain-cases 用例库**（稳定 Case ID，跨变更维护）→ 投影 TestPack v1 → 门禁绑定。
 > 直接手写契约 = 流程缺口（试点轮次实证未走库，已修正）。
+>
+> **T 门全链路（v2.5：domain-cases → 投影 → 纳管 → 束）**：
+> ① 用例库正本 `tests/domain-cases/`（features.md 特性登记表 + F-ID 注册为
+> requirement-kind basis 条目，:160 per-F-ID 覆盖强制）→ ② 变更投影
+> `<changeDir>/tests/`（compile-domain-cases：`--bind-specs` 晋升后 spec 键校验、
+> `--promote` features.md spec 绑定列晋升、覆盖矩阵自动生成进 testPack）→
+> ③ T 门束构造（gate-bundle `--gate T --test-contract <file> [--feature-map features.md]`）：
+> 构造期机械复验（盘上 pack digest / 投影重算深比较含矩阵 / 矩阵专属条目 digest），
+> **三 ref 快照**（束 + test-pack.snapshot + test-contract.snapshot）写 `.sdd/delivery/gates/t/`
+> 并入 outcome artifactHashes——record 期 sweep 逐条哈希比对。**`--test-contract` 仅 T 门
+> 接受**（其余门传入即拒，拒收落在构造期）。KB 纳管：发布 llmwiki 后落
+> `.sdd/delivery/gates/t/kb-publish-receipt.json`（非强制；在场则校验 Run 绑定 + 正本
+> digest，比对脚本 `tools/test-cases/verify-kb-receipt.mjs`；llmwiki MCP 恢复前页读回
+> 用人工导出文件）。
 | 构建计划（P） | 构建计划 | **批准计划** | 任务 DAG/顺序合理 | task-dag.json；gates/p 束 |
 | 实现阶段 | 实现 | （代理干活） | — | 实现代码 + 测试原始日志 |
 
@@ -140,6 +160,14 @@ outcome sweep 重准录先前门时 FORGED_COLLECTION 卡死整个 Run（r3 实�
 | 白盒验证（V） | 白盒验证 | **确认验证结果** | 真实浏览器/机器证据、NOT-EXERCISED 如实列明 | verification 三件套 + 截图；gates/v 束 |
 | 知识收尾（Kp） | 知识收尾 | （代理收尾） | — | closeout；gates/kp 束 |
 | 归档 | 收档 | **批准归档** | 全部通过 | archive/<date>-<change>/ |
+
+> **V 门人类验收 charter 约定（§7 增补 B）**：验收不是橡皮图章——一页 charter session：
+> `Explore <F-ID> With <入口/工具> To discover <风险>`（30–60 分钟 timebox，验前声明
+> 测试数据与环境）；session sheet 实时记 BUG/OBSERVATION/QUESTION 三标签；收尾五问
+> （charter 完成度 / 意外发现 / 阻塞 / 后续 charter / 可升级为回归用例的发现——PROOF
+> 语义项目裁剪版）。**证据三元组**：check-id + 期望引用（AC/QC）+ 评审决定，缺一不算
+> 证据；**known-issues 显式清单**（禁止静默豁免）+ 显式 go/no-go。发现可复现问题 →
+> 升级为机制 AC 回 R 门双轨。机械强制随 V/Kp 另案（本变更只落约定）。
 
 **费曼提醒**：为什么每门都要"独立评审"？——写菜谱的人不能自己试菜。门禁强制
 "签收者 ≠ 作者"，这是整套系统最值钱的一条规则。

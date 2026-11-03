@@ -27,7 +27,7 @@
 | --- | --- | --- | --- |
 | `/comet-open` · R需求澄清 | grill-me、需求作者与有权确认者；按权限检索知识 | 目标、范围、AC、非目标、环境、需求revision | 关键问题闭合且范围确认；未过R拒绝正式架构，范围问题回owner |
 | `/comet-design` · A架构 | 架构作者、grill-me、独立consensus | 唯一design/ADR、冻结包、原票/manifest/tally | 真实独立审查绑定当前摘要和受保护参与者/阈值；拒绝回架构作者 |
-| 同一Design · T测试设计 | test-authoring设计、独立测试设计审查 | TestPack、case→AC、oracle、异常/边界/权限、环境/数据/清理 | 单独T门评估充分性；不是A附录或文档存在检查，缺口回测试作者 |
+| 同一Design · T测试设计 | test-authoring设计、独立测试设计审查 | domain-cases 用例库（features.md F-ID 登记 + 双轨 AC）→ 投影 TestPack + 覆盖矩阵 → 三 ref 快照（束+pack+contract，.sdd/delivery/gates/t/）、case→AC、oracle、异常/边界/权限、环境/数据/清理 | 单独T门评估充分性；构造期机械复验（pack digest/投影重算/矩阵条目）；不是A附录或文档存在检查，缺口回测试作者 |
 | `/comet-build` · P计划 | planner仅使用计划方法 | 同Change唯一tasks/DAG、任务输入/输出/测试引用 | 绑定已过R/A/T；不得另起Goal、DAG、监督或调度 |
 | 同一Build · 测试自动化 | test-authoring | 可执行测试、fixture、作者自检 | 按已审TestPack实现；弱oracle退作者，不签业务验收 |
 | 同一Build · 实现与代码审查 | Matt tdd/diagnosing-bugs、独立code-review | 原因匹配的RED/GREEN、代码候选、审查 | 环境故障不算行为RED；缺陷回Builder，审查者不能修后自评 |
