@@ -427,3 +427,53 @@ test('two-layer merge: library config alone falls back unchanged (no invented ch
       /DOMAIN_CASES_INVALID/, '仅 ① 回落是显式失败（缺 ② 身份/设计字段），不是静默成功');
   } finally { f.dispose(); }
 });
+
+// ---- v2.5 AC-1：覆盖矩阵（testPack 内嵌字段 + dependencyBaselines 专属条目） ----
+
+import { envelopeDigest } from '../lib/delivery/evidence.js';
+
+const MATRIX_KIND = 'domain-cases/v1:feature-coverage-matrix';
+
+test('coverage matrix: resolved design embeds rows and binds the dedicated baseline digest', () => {
+  const f = layeredFixture();
+  try {
+    fs.appendFileSync(path.join(f.root, 'features.md'), 'F-REQ-2: write item\n');
+    fs.appendFileSync(path.join(f.root, 'cases.md'), `\n### TC-WRITE-1 — Write item\n\n- **Requirement IDs**: F-REQ-2\n- **Acceptance**: AC-2\n- **Dimensions**: Journey-B\n- **Level**: integration\n- **Priority**: P1\n- **Precondition**: User is permitted\n- **Input**: New item\n- **Step**: Create the item\n- **Expected**: The item is stored\n- **Oracle basis**: F-REQ-2\n- **Oracle authority**: Public API response\n- **Cleanup**: Remove fixture data\n- **Evidence**: Request and response\n- **Check ID**: read-item\n`);
+    const library = { ...f.library, basis: [...f.library.basis, { id: 'F-REQ-2', kind: 'requirement', path: 'features.md' }],
+      dimensions: { ...f.library.dimensions, 'Journey-B': { required: true, reason: 'Required by F-REQ-2', basis_ids: ['F-REQ-2'] } } };
+    const change = { ...f.change };
+    const result = compileDomainCases({ projectRoot: f.root, caseFile: 'cases.md', config: mergeDomainCaseConfigs(library, change) });
+    const matrix = result.testPack.feature_coverage_matrix;
+    assert.deepEqual(matrix, [
+      { feature_id: 'F-REQ-1', case_count: 1, acceptance_bindings: 1, journey: 'Journey-A', level: 'api', status: 'covered' },
+      { feature_id: 'F-REQ-2', case_count: 1, acceptance_bindings: 1, journey: 'Journey-B', level: 'integration', status: 'covered' },
+    ]);
+    const entry = result.testContract.dependencyBaselines.find(item => item.kind === MATRIX_KIND);
+    assert.ok(entry, '专属 baselines 条目必须在场');
+    assert.equal(entry.digest, envelopeDigest(matrix), '专属条目 digest = envelopeDigest(矩阵)');
+  } finally { f.dispose(); }
+});
+
+test('coverage matrix: unresolved rows carry placeholder journey/level; unresolved design has no contract entry', () => {
+  const f = layeredFixture();
+  try {
+    fs.appendFileSync(path.join(f.root, 'features.md'), 'F-REQ-2: write item\n');
+    const library = { ...f.library, basis: [...f.library.basis, { id: 'F-REQ-2', kind: 'requirement', path: 'features.md' }] };
+    const change = { ...f.change, unresolved: [{ requirement_ids: ['F-REQ-2'], question: 'Which write semantics apply?' }] };
+    const result = compileDomainCases({ projectRoot: f.root, caseFile: 'cases.md', config: mergeDomainCaseConfigs(library, change) });
+    assert.deepEqual(result.testPack.feature_coverage_matrix, [
+      { feature_id: 'F-REQ-1', case_count: 1, acceptance_bindings: 1, journey: 'Journey-A', level: 'api', status: 'covered' },
+      { feature_id: 'F-REQ-2', case_count: 0, acceptance_bindings: 0, journey: '—', level: '—', status: 'unresolved' },
+    ]);
+    assert.equal(result.testContract, null, '未决设计不生成 TestContract（专属条目随之缺席，已决编译再入链）');
+  } finally { f.dispose(); }
+});
+
+test('coverage matrix: the dedicated kind is reserved against basis id collisions', () => {
+  const f = layeredFixture();
+  try {
+    const merged = mergeDomainCaseConfigs(
+      { ...f.library, basis: [...f.library.basis, { id: MATRIX_KIND, kind: 'requirement', path: 'features.md' }] }, f.change);
+    assert.throws(() => compileDomainCases({ projectRoot: f.root, caseFile: 'cases.md', config: merged }), /invalid basis identities/);
+  } finally { f.dispose(); }
+});
