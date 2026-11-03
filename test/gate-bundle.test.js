@@ -63,7 +63,7 @@ test('refuse semantics: a bare synthetic run blocks at evaluate with named revie
     gate: 'R', action: 'bare-change:1', claim: path.join(root, 'claim.json'),
     openEvidence: path.join(root, 'open-ev.json'), args: path.join(root, 'args.json'),
     project: root, identity: { contentHash: 'e'.repeat(64), runtimeVersion: '0.5.1' },
-  }, { now: () => '2026-11-02T00:00:00.000Z', clock: () => 1793577600000 }), (error) => {
+  }, { now: () => '2026-11-03T00:00:00.000Z', clock: () => 1793664000000 }), (error) => {
     assert.match(error.message, /GATE BLOCKED/);
     assert.match(error.message, /INDEPENDENT_REVIEW_REQUIRED/);
     assert.match(error.message, /REQUIREMENTS_CONFIRMATION_REQUIRED/);
@@ -143,7 +143,7 @@ test('multi-gate authority merge: per-gate entries preserved, same-gate same-dig
   fs.writeFileSync(path.join(appDir, 'skills/multi-agent-consensus-review/SKILL.md'), 'name: multi-agent-consensus-review\nversion: 1.0.0\n');
   fs.writeFileSync(path.join(appDir, 'application.json'), JSON.stringify({ contentHash: '4'.repeat(64), runtimeVersion: '0.5.1' }));
   const identity = { contentHash: '4'.repeat(64), runtimeVersion: '0.5.1' };
-  const bare = { now: () => '2026-11-02T00:00:00.000Z', clock: () => 1793577600000 };
+  const bare = { now: () => '2026-11-03T00:00:00.000Z', clock: () => 1793664000000 };
   const authorityPath = path.join(root, 'openspec/changes/dual-change/.comet/delivery-authority.json');
 
   // 两次构造在裸 Run 上都会止于 evaluate 的语义拒绝（预期），但 authority 条目必须已落盘。

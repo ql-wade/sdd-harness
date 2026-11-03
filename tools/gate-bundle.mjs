@@ -85,7 +85,7 @@ export function readRunView(claimRaw, actionId) {
 }
 
 function parseArgv(argv) {
-  const opts = { gate: null, action: null, claim: null, openEvidence: null, args: null, project: process.cwd(), cometRoot: null, checkOnly: false };
+  const opts = { gate: null, action: null, claim: null, openEvidence: null, args: null, project: process.cwd(), cometRoot: null, checkOnly: false, verdict: null, reason: null };
   for (let i = 0; i < argv.length; i++) {
     const k = argv[i];
     if (k === '--gate') opts.gate = argv[++i];
@@ -96,6 +96,8 @@ function parseArgv(argv) {
     else if (k === '--project') opts.project = argv[++i];
     else if (k === '--comet-root') opts.cometRoot = argv[++i];
     else if (k === '--check-only') opts.checkOnly = true;
+    else if (k === '--verdict') opts.verdict = argv[++i];
+    else if (k === '--reason') opts.reason = argv[++i];
     else if (k === '--help' || k === '-h') opts.help = true;
   }
   return opts;
@@ -309,11 +311,36 @@ export async function withRuntimeHash(opts, fn) {
 
 async function main() {
   const opts = parseArgv(process.argv.slice(2));
-  if (opts.help || !opts.gate || !opts.action) {
-    console.error('用法: node tools/gate-bundle.mjs --project <root> --gate R|A|T|P|V|Kp --action <actionId> --claim <claim.json> --open-evidence <ev.json> --args <args.json> [--comet-root <pkgRoot>] [--check-only]');
+  if (opts.help || !opts.gate || (!opts.action && !opts.verdict)) {
+    console.error('用法: node tools/gate-bundle.mjs --project <root> --gate R|A|T|P|V|Kp [--verdict pass|revise-requirements|repair] --action <actionId> --claim <claim.json> --open-evidence <ev.json> --args <args.json> [--comet-root <pkgRoot>] [--check-only]');
     process.exit(opts.help ? 0 : 1);
   }
   try {
+    // 修订模式：verdict='revise-requirements'|'repair' 是每个门的内建循环词汇。两个门：
+    // (A) 扩展动作在手（running）→ 直接 record-outcome 带 verdict 字段，无需本工具；
+    // (B) 无在手动作（如 build 相位 claim 被 sweep 拒，r6 实证）→ 生成 dispatch-command
+    //     请求：运行时执行 classic.composition.revise → 重置 designDoc/plan/handoffContext +
+    //     phase:open → 同一 Run 全旅程重放（classic-application.js:386-404）。
+    if (opts.verdict && opts.verdict !== 'pass') {
+      const claimRaw = JSON.parse(readFileSync(opts.claim, 'utf8'));
+      const cur = claimRaw.run?.current ?? claimRaw.data?.current ?? claimRaw.current ?? claimRaw;
+      const runId = cur.runId ?? opts.action?.split(':')[0];
+      if (!runId) throw new Error('claim 里解析不出 runId');
+      const request = {
+        operation: 'dispatch-command',
+        runId,
+        expectedRevision: cur.revision,
+        commandId: randomUUID(),
+        name: opts.verdict,
+        input: null,
+      };
+      const out = path.join(opts.project, '.sdd', 'delivery', 'gates', `${GATE_DEFAULTS[opts.gate].dir}-revise-command.json`);
+      mkdirSync(path.dirname(out), { recursive: true });
+      writeFileSync(out, JSON.stringify(request, null, 2) + '\n');
+      console.log(JSON.stringify({ ok: true, mode: 'revise-command', gate: opts.gate, verdict: opts.verdict, runId, expectedRevision: request.expectedRevision, requestFile: out }, null, 1));
+      console.error(`✅ 修订命令请求就绪：comet runtime dispatch --application sdd-managed-delivery --project-root <root> --request ${out} --json\n   效果：designDoc/plan/handoffContext 重置 + phase:open，同一 Run 全旅程重放（修订后工件重新取证）。`);
+      return;
+    }
     const built = await buildGateBundle(opts);
     const artifactAbs = path.join(opts.project, built.artifactRef);
     if (!opts.checkOnly) {
