@@ -501,3 +501,36 @@ test('CLI --bind-specs validates spec-key requirement IDs against openspec/specs
     assert.match(bad.stderr, /not resolvable/);
   } finally { f.dispose(); }
 });
+
+// ---- v2.5 AC-1：--promote（features.md spec 绑定列晋升；三选一裁定：用例保留 F-ID 不改写） ----
+
+test('CLI --promote refuses before spec merge, promotes after, and rebinds the spec digest', () => {
+  const f = layeredFixture();
+  try {
+    const specDir = path.join(f.root, 'openspec', 'specs', 'read-item');
+    fs.mkdirSync(specDir, { recursive: true });
+    const specPath = path.join(specDir, 'spec.md');
+    fs.writeFileSync(path.join(f.root, 'features.md'), '# Features\n\n| F-ID | 来源引用 | 状态 | Journey 维度 | spec 绑定 |\n| --- | --- | --- | --- | --- |\n| F-REQ-1 | design.md#read | covered | Journey-A |  |\n');
+    const library = { basis: [{ id: 'F-REQ-1', kind: 'requirement', path: 'features.md' }],
+      dimensions: Object.fromEntries('ABCDEFGHIJ'.split('').map(c => [`Journey-${c}`, {
+        required: c === 'A', reason: c === 'A' ? 'Required by F-REQ-1' : 'Not applicable', basis_ids: ['F-REQ-1'],
+      }])) };
+    fs.writeFileSync(path.join(f.root, 'config.json'), JSON.stringify(mergeDomainCaseConfigs(library, f.change)));
+    fs.writeFileSync(path.join(f.root, 'mapping.json'), JSON.stringify({ capability: 'read-item', bindings: { 'F-REQ-1': 'Read item' } }));
+    const args = ['--project', f.root, '--cases', 'cases.md', '--config', 'config.json', '--promote', 'mapping.json'];
+    // 1) delta 合并前（spec.md 缺席）→ 拒，features.md 不动
+    const early = spawnSync('node', [cli, ...args], { encoding: 'utf8' });
+    assert.equal(early.status, 1);
+    assert.match(early.stderr, /spec delta not merged/);
+    assert.match(fs.readFileSync(path.join(f.root, 'features.md'), 'utf8'), /\| F-REQ-1 \| design\.md#read \| covered \| Journey-A \| +\|/, '拒绝路径不得写入登记表');
+    // 2) 合并后晋升成功
+    const specBytes = fs.writeFileSync(specPath, '# read-item Specification\n\n### Requirement: Read item\nThe system SHALL read items.\n') ?? fs.readFileSync(specPath);
+    const digestHex = hash(specBytes);
+    const done = spawnSync('node', [cli, ...args], { encoding: 'utf8' });
+    assert.equal(done.status, 0, done.stderr);
+    // 3) 重绑 digest 元数据：绑定单元格含真实 spec 字节 sha256
+    const row = fs.readFileSync(path.join(f.root, 'features.md'), 'utf8').split('\n').find(line => line.includes('| F-REQ-1 |'));
+    assert.match(row, /read-item#Read item/);
+    assert.ok(row.includes(`digest:${digestHex}`), `绑定必须携带真实 digest，got: ${row}`);
+  } finally { f.dispose(); }
+});
