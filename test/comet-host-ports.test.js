@@ -408,3 +408,84 @@ test('archive-phase record lookup falls back to the archived change dir copy', a
     assert.equal(live.authority, undefined, 'live-phase missing record must stay unresolved');
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
+
+// AC-7 回归（test-case-architecture 提案）：archive 搬移变更目录后，已录 V pass 的
+// 域自动化重验必须能读到归档副本（与 authority 记录同款回退语义）；归档副本被篡改
+// 时必须拒绝——回退不能变成盲通过。
+test('verifyDomainAutomation re-validates from the archived change copy after the archive move (AC-7)', async (t) => {
+  const { createProtectedHostPorts } = await import('../lib/adapters/comet-host-ports.js');
+  const { compileDomainCases } = await import('../lib/delivery/domain-cases.js');
+  const fs = await import('node:fs');
+  const os = await import('node:os');
+  const nodePath = await import('node:path');
+  const root = fs.realpathSync(fs.mkdtempSync(path.join(fs.realpathSync(os.tmpdir()), 'v-archive-')));
+  const change = 'synthetic-v-archive', changeDir = `openspec/changes/${change}`;
+  fs.mkdirSync(nodePath.join(root, changeDir, 'tests'), { recursive: true });
+  fs.writeFileSync(nodePath.join(root, 'requirements.md'), '# Requirement\nA permitted user can read the item.\n');
+  fs.writeFileSync(nodePath.join(root, 'design.md'), '# Design\nRead is performed through the public API.\n');
+  fs.writeFileSync(nodePath.join(root, 'read.test.js'), 'test fixture');
+  fs.writeFileSync(nodePath.join(root, changeDir, 'tests', 'domain-cases.md'),
+    '<!-- domain-cases/v1 -->\n# Domain cases\n\n### TC-READ-1 — Read item\n\n- **Requirement IDs**: REQ-1\n- **Acceptance**: AC-1\n- **Dimensions**: Journey-A\n- **Level**: api\n- **Priority**: P1\n- **Precondition**: User is permitted\n- **Input**: Item exists\n- **Step**: Request the item\n- **Expected**: The item is returned\n- **Oracle basis**: REQ-1\n- **Oracle authority**: Public API response\n- **Cleanup**: Remove fixture data\n- **Evidence**: Request and response\n- **Check ID**: read-item\n- **Automation path**: read.test.js\n- **Automation test ID**: read-item-test\n- **Automation command**: ["node","--test","read.test.js"]\n');
+  const measuredDigest = sha('measured-output');
+  const authorThread = UUID, reviewerThread = UUID2, builderThread = 'f0e0d0c0-b0a0-0908-0706-050403020100';
+  const locator = JSON.stringify({ sessionPath: `/Users/x/.codex/sessions/2026/10/30/rollout-${authorThread}.jsonl`, threadId: authorThread,
+    offset: 0, length: 10, turnId: UUID2, itemId: `exec-${UUID2}`,
+    before: { offset: 0, length: 5, turnId: UUID2, itemId: `exec-${UUID2}`, commandDigest: sha('before') },
+    after: { offset: 20, length: 5, turnId: UUID2, itemId: `exec-${UUID2}`, commandDigest: sha('after') },
+    claimBefore: { ok: true }, claimAfter: { ok: true } });
+  const dimensions = Object.fromEntries('ABCDEFGHIJ'.split('').map(c => [`Journey-${c}`, {
+    required: c === 'A', reason: c === 'A' ? 'Required' : 'Not applicable', basis_ids: ['REQ-1'] }]));
+  const config = { project: 'fixture', change, mode: 'automate', design_basis_id: 'DESIGN-1',
+    basis: [{ id: 'REQ-1', kind: 'requirement', path: 'requirements.md' }, { id: 'DESIGN-1', kind: 'source', path: 'design.md' }],
+    dimensions, checks: [{ id: 'read-item', level: 'api', capability: 'api:read', command: 'node --test read.test.js' }],
+    cleanup: { environment: 'Dispose', data: 'none' },
+    self_checks: [{ caseId: 'TC-READ-1', testId: 'read-item-test', execution: authorThread, principal: authorThread,
+      outcome: 'pass', executions: { total: 1, valid: 1 }, evidenceRefs: [{ ref: locator, digest: measuredDigest }] }] };
+  fs.writeFileSync(nodePath.join(root, changeDir, 'tests', 'domain-cases.config.json'), JSON.stringify(config));
+  const projection = compileDomainCases({ projectRoot: root, caseFile: `${changeDir}/tests/domain-cases.md`, config });
+  const contract = projection.testContract;
+  const binding = { rootThreadId: builderThread, parentTurnId: UUID2, childThreadId: reviewerThread, childTurnId: UUID2,
+    spawnId: 'call_abc12345', reportDigest: sha('report'), childMeta: { offset: 0, length: 5 }, start: { offset: 1, length: 5 },
+    finish: { offset: 2, length: 5 }, spawn: { offset: 3, length: 5 }, completion: { offset: 4, length: 5 },
+    parentSessionPath: '/p.jsonl', childSessionPath: '/c.jsonl', evidenceDigest: sha('review-evidence') };
+  const tAction = { id: 'run:t', stepId: 'classic.extension.test-design-review', status: 'succeeded', attempt: 1,
+    input: { note: 't' }, inputHash: envelopeDigest({ note: 't' }), claim: { executorId: 't-exec', sessionId: builderThread, token: 'tok' },
+    outcome: { status: 'succeeded', output: { verdict: 'pass', gateEvidence: { gate: 'T', inputs: { testContract: contract },
+      receipts: [{ sourcePacket: { collection: { source: { independentReview: { codex: binding } } } } }] } } } };
+  const vInput = { note: 'v' };
+  const vAction = { id: 'run:v', stepId: 'classic.extension.verify-whitebox', status: 'running', attempt: 1,
+    input: vInput, inputHash: envelopeDigest(vInput), claim: { executorId: 'v-exec', sessionId: builderThread, token: 'tok2' } };
+  const inputs = { inputDigest: sha('candidate'), testContract: contract };
+  const policy = { ref: 'policy', digest: sha('policy') };
+  const makePorts = () => createProtectedHostPorts({
+    context: { projectRoot: root, identity: { contentHash: sha('app'), runtimeVersion: '0.5.1' } },
+    readers: {
+      claimedTest: () => ({ ok: true, threadId: authorThread, outcome: 'pass', summary: { tests: 1, pass: 1, fail: 0, skipped: 0, cancelled: 0 }, outputDigest: measuredDigest }),
+      independentTurn: () => ({ ok: true, childThreadId: reviewerThread }),
+    },
+  });
+
+  // 1) 活目录 record V pass：投影可计算，promotion 成立。
+  const liveRun = { runId: change, revision: 5, status: 'running', input: { change, changeDir }, actions: [tAction, vAction] };
+  const ports = makePorts();
+  assert.equal(ports.verifyGateInputs({ run: liveRun, action: vAction, gate: 'V', inputs, policy }), true);
+  assert.equal(ports.verifyDomainAutomation({ runId: change, inputs, policy }).ok, true, 'live-dir pass must hold pre-archive');
+
+  // 2) archive 执行器语义：变更目录整体搬入 archive/<date>-<change>/，Run 状态转 archive
+  //    → 已录 V pass 的重验必须经归档副本通过（AC-7 回退）。
+  const archivedDir = path.join(root, 'openspec', 'changes', 'archive', '2026-11-03-synthetic-v-archive');
+  fs.mkdirSync(path.dirname(archivedDir), { recursive: true });
+  fs.renameSync(path.join(root, changeDir), archivedDir);
+  const archivedRun = { ...liveRun, state: { phase: 'archive' } };
+  const after = makePorts();
+  assert.equal(after.verifyGateInputs({ run: archivedRun, action: vAction, gate: 'V', inputs, policy }), true);
+  const promotion = after.verifyDomainAutomation({ runId: change, inputs, policy });
+  assert.equal(promotion.ok, true, JSON.stringify(promotion));
+
+  // 3) 篡改归档副本 → 重验拒绝（回退不得盲通过）。
+  fs.appendFileSync(path.join(archivedDir, 'tests', 'domain-cases.md'), '\n<!-- tampered -->\n');
+  const tampered = makePorts();
+  tampered.verifyGateInputs({ run: archivedRun, action: vAction, gate: 'V', inputs, policy });
+  assert.equal(tampered.verifyDomainAutomation({ runId: change, inputs, policy }).ok, false, 'archived-copy tampering must refuse');
+  fs.rmSync(root, { recursive: true, force: true });
+});
