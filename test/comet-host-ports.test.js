@@ -489,3 +489,80 @@ test('verifyDomainAutomation re-validates from the archived change copy after th
   assert.equal(tampered.verifyDomainAutomation({ runId: change, inputs, policy }).ok, false, 'archived-copy tampering must refuse');
   fs.rmSync(root, { recursive: true, force: true });
 });
+
+// proposal v2.5 §1/step-4（四轮席3 观察 O1 闭合）：V 投影重算必须经 ①+② 两层 config
+// 合并——库级 F-ID requirement basis + 维度在 ①（tests/domain-cases/domain-cases.config.json），
+// 变更级设计 source + 身份字段在 ②；单读 ② 会丢 F-ID 覆盖强制（合并 = mergeDomainCaseConfigs）。
+test('V promotion recomputes through the ①+② two-layer config merge', async () => {
+  const { createProtectedHostPorts } = await import('../lib/adapters/comet-host-ports.js');
+  const { compileDomainCases, mergeDomainCaseConfigs } = await import('../lib/delivery/domain-cases.js');
+  const fs = await import('node:fs');
+  const os = await import('node:os');
+  const nodePath = await import('node:path');
+  const root = fs.realpathSync(fs.mkdtempSync(path.join(fs.realpathSync(os.tmpdir()), 'v-layered-')));
+  const change = 'synthetic-v-layered', changeDir = `openspec/changes/${change}`;
+  fs.mkdirSync(nodePath.join(root, changeDir, 'tests'), { recursive: true });
+  fs.mkdirSync(nodePath.join(root, 'tests', 'domain-cases'), { recursive: true });
+  fs.writeFileSync(nodePath.join(root, 'features.md'), '# Features\nA permitted user can read the item.\n');
+  fs.writeFileSync(nodePath.join(root, 'design.md'), '# Design\nRead is performed through the public API.\n');
+  fs.writeFileSync(nodePath.join(root, 'read.test.js'), 'test fixture');
+  fs.writeFileSync(nodePath.join(root, changeDir, 'tests', 'domain-cases.md'),
+    '<!-- domain-cases/v1 -->\n# Domain cases\n\n### TC-READ-1 — Read item\n\n- **Requirement IDs**: REQ-1\n- **Acceptance**: AC-1\n- **Dimensions**: Journey-A\n- **Level**: api\n- **Priority**: P1\n- **Precondition**: User is permitted\n- **Input**: Item exists\n- **Step**: Request the item\n- **Expected**: The item is returned\n- **Oracle basis**: REQ-1\n- **Oracle authority**: Public API response\n- **Cleanup**: Remove fixture data\n- **Evidence**: Request and response\n- **Check ID**: read-item\n- **Automation path**: read.test.js\n- **Automation test ID**: read-item-test\n- **Automation command**: ["node","--test","read.test.js"]\n');
+  const measuredDigest = sha('measured-output');
+  const authorThread = UUID, reviewerThread = UUID2, builderThread = 'f0e0d0c0-b0a0-0908-0706-050403020100';
+  const locator = JSON.stringify({ sessionPath: `/Users/x/.codex/sessions/2026/10/30/rollout-${authorThread}.jsonl`, threadId: authorThread,
+    offset: 0, length: 10, turnId: UUID2, itemId: `exec-${UUID2}`,
+    before: { offset: 0, length: 5, turnId: UUID2, itemId: `exec-${UUID2}`, commandDigest: sha('before') },
+    after: { offset: 20, length: 5, turnId: UUID2, itemId: `exec-${UUID2}`, commandDigest: sha('after') },
+    claimBefore: { ok: true }, claimAfter: { ok: true } });
+  const library = {
+    basis: [{ id: 'REQ-1', kind: 'requirement', path: 'features.md' }],
+    dimensions: Object.fromEntries('ABCDEFGHIJ'.split('').map(c => [`Journey-${c}`, {
+      required: c === 'A', reason: c === 'A' ? 'Required' : 'Not applicable', basis_ids: ['REQ-1'] }])),
+  };
+  const changeConfig = { project: 'fixture', change, mode: 'automate', design_basis_id: 'DESIGN-1',
+    basis: [{ id: 'DESIGN-1', kind: 'source', path: 'design.md' }],
+    checks: [{ id: 'read-item', level: 'api', capability: 'api:read', command: 'node --test read.test.js' }],
+    cleanup: { environment: 'Dispose', data: 'none' },
+    self_checks: [{ caseId: 'TC-READ-1', testId: 'read-item-test', execution: authorThread, principal: authorThread,
+      outcome: 'pass', executions: { total: 1, valid: 1 }, evidenceRefs: [{ ref: locator, digest: measuredDigest }] }] };
+  fs.writeFileSync(nodePath.join(root, 'tests', 'domain-cases', 'domain-cases.config.json'), JSON.stringify(library));
+  fs.writeFileSync(nodePath.join(root, changeDir, 'tests', 'domain-cases.config.json'), JSON.stringify(changeConfig));
+  const projection = compileDomainCases({ projectRoot: root, caseFile: `${changeDir}/tests/domain-cases.md`,
+    config: mergeDomainCaseConfigs(library, changeConfig) });
+  const contract = projection.testContract;
+  const binding = { rootThreadId: builderThread, parentTurnId: UUID2, childThreadId: reviewerThread, childTurnId: UUID2,
+    spawnId: 'call_abc12345', reportDigest: sha('report'), childMeta: { offset: 0, length: 5 }, start: { offset: 1, length: 5 },
+    finish: { offset: 2, length: 5 }, spawn: { offset: 3, length: 5 }, completion: { offset: 4, length: 5 },
+    parentSessionPath: '/p.jsonl', childSessionPath: '/c.jsonl', evidenceDigest: sha('review-evidence') };
+  const tAction = { id: 'run:t', stepId: 'classic.extension.test-design-review', status: 'succeeded', attempt: 1,
+    input: { note: 't' }, inputHash: envelopeDigest({ note: 't' }), claim: { executorId: 't-exec', sessionId: builderThread, token: 'tok' },
+    outcome: { status: 'succeeded', output: { verdict: 'pass', gateEvidence: { gate: 'T', inputs: { testContract: contract },
+      receipts: [{ sourcePacket: { collection: { source: { independentReview: { codex: binding } } } } }] } } } };
+  const vInput = { note: 'v' };
+  const vAction = { id: 'run:v', stepId: 'classic.extension.verify-whitebox', status: 'running', attempt: 1,
+    input: vInput, inputHash: envelopeDigest(vInput), claim: { executorId: 'v-exec', sessionId: builderThread, token: 'tok2' } };
+  const run = { runId: change, revision: 4, status: 'running', input: { change, changeDir }, actions: [tAction, vAction] };
+  const ports = createProtectedHostPorts({
+    context: { projectRoot: root, identity: { contentHash: sha('app'), runtimeVersion: '0.5.1' } },
+    readers: {
+      claimedTest: () => ({ ok: true, threadId: authorThread, outcome: 'pass', summary: { tests: 1, pass: 1, fail: 0, skipped: 0, cancelled: 0 }, outputDigest: measuredDigest }),
+      independentTurn: () => ({ ok: true, childThreadId: reviewerThread }),
+    },
+  });
+  const inputs = { inputDigest: sha('candidate'), testContract: contract };
+  const policy = { ref: 'policy', digest: sha('policy') };
+  assert.equal(ports.verifyGateInputs({ run, action: vAction, gate: 'V', inputs, policy }), true);
+  const promotion = ports.verifyDomainAutomation({ runId: change, inputs, policy });
+  assert.equal(promotion.ok, true, JSON.stringify(promotion));
+  assert.equal(promotion.kind, 'verified-domain-automation');
+  assert.deepEqual(promotion.caseIds, ['TC-READ-1']);
+  // 覆盖强制仍经合并生效：① 再注册一个无 case 无 unresolved 的 F-ID → 重算必须拒
+  fs.writeFileSync(nodePath.join(root, 'features.md'), '# Features\nA permitted user can read the item.\nSecond feature pending.\n');
+  const library2 = { ...library, basis: [...library.basis, { id: 'REQ-2', kind: 'requirement', path: 'features.md' }] };
+  fs.writeFileSync(nodePath.join(root, 'tests', 'domain-cases', 'domain-cases.config.json'), JSON.stringify(library2));
+  const refused = ports.verifyDomainAutomation({ runId: change, inputs, policy });
+  assert.equal(refused.ok, false, '合并后 :160 per-F-ID 覆盖强制必须仍生效');
+  assert.match(refused.reason ?? '', /not computable|requirement/);
+  fs.writeFileSync(nodePath.join(root, 'tests', 'domain-cases', 'domain-cases.config.json'), JSON.stringify(library));
+});
