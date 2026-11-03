@@ -477,3 +477,27 @@ test('coverage matrix: the dedicated kind is reserved against basis id collision
     assert.throws(() => compileDomainCases({ projectRoot: f.root, caseFile: 'cases.md', config: merged }), /invalid basis identities/);
   } finally { f.dispose(); }
 });
+
+// ---- v2.5 AC-1：--bind-specs（晋升后 spec 键 ID 可解析性，构造于 openspec/specs） ----
+
+test('CLI --bind-specs validates spec-key requirement IDs against openspec/specs', () => {
+  const f = layeredFixture();
+  try {
+    fs.mkdirSync(path.join(f.root, 'openspec', 'specs', 'read-item'), { recursive: true });
+    const specPath = path.join(f.root, 'openspec', 'specs', 'read-item', 'spec.md');
+    fs.writeFileSync(specPath, '# read-item Specification\n\n### Requirement: Read item\nThe system SHALL read items.\n');
+    fs.writeFileSync(path.join(f.root, 'cases.md'), `<!-- domain-cases/v1 -->\n# Domain cases\n\n### TC-SPEC-1 — Read item\n\n- **Requirement IDs**: read-item#Read item\n- **Acceptance**: AC-1\n- **Dimensions**: Journey-A\n- **Level**: api\n- **Priority**: P1\n- **Precondition**: User is permitted\n- **Input**: Item exists\n- **Step**: Request the item\n- **Expected**: The item is returned\n- **Oracle basis**: read-item#Read item\n- **Oracle authority**: Specification\n- **Cleanup**: Remove fixture data\n- **Evidence**: Request and response\n- **Check ID**: read-item\n`);
+    const library = { basis: [{ id: 'read-item#Read item', kind: 'requirement', path: 'openspec/specs/read-item/spec.md' }],
+      dimensions: Object.fromEntries('ABCDEFGHIJ'.split('').map(c => [`Journey-${c}`, {
+        required: c === 'A', reason: c === 'A' ? 'Required by spec' : 'Not applicable', basis_ids: ['read-item#Read item'],
+      }])) };
+    fs.writeFileSync(path.join(f.root, 'config.json'), JSON.stringify(mergeDomainCaseConfigs(library, f.change)));
+    const run = () => spawnSync('node', [cli, '--project', f.root, '--cases', 'cases.md', '--config', 'config.json', '--bind-specs'], { encoding: 'utf8' });
+    const ok = run();
+    assert.equal(ok.status, 0, ok.stderr);
+    fs.writeFileSync(specPath, '# read-item Specification\n\n### Requirement: Renamed away\nThe requirement heading drifted.\n');
+    const bad = run();
+    assert.equal(bad.status, 1);
+    assert.match(bad.stderr, /not resolvable/);
+  } finally { f.dispose(); }
+});

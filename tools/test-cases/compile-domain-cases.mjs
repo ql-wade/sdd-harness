@@ -43,6 +43,7 @@ function ordered(value) {
 try {
   const { values, positionals } = parseArgs({ allowPositionals: true, options: {
     project: { type: 'string' }, cases: { type: 'string' }, config: { type: 'string' }, verify: { type: 'string' }, view: { type: 'string' },
+    'bind-specs': { type: 'boolean' },
   } });
   if (positionals.length || !values.project || !values.cases || !values.config) throw new Error('project, cases and config are required');
   if (values.view && !['projection', 'testpack', 'contract'].includes(values.view)) throw new Error('unknown projection view');
@@ -55,6 +56,26 @@ try {
   const frozen = values.verify ? uniqueJson(readLocal(root, values.verify)) : null;
   const result = values.verify ? verifyDomainCaseProjection({ ...input, projection: frozen }) : compileDomainCases(input);
   const projection = values.verify ? (result.ok ? frozen : null) : result;
+  if (projection && values['bind-specs']) {
+    // Promoted-library resolvability: every spec-key Requirement ID
+    // (`<capability>#<title>`) must name an existing requirement heading in
+    // openspec/specs/<capability>/spec.md. Change-phase F-ID refs (no '#')
+    // are registered basis entries and stay compiler-enforced instead.
+    for (const entry of projection.testPack.cases) {
+      for (const id of entry.requirement_ids) {
+        const match = /^([^#\s]+)#(.+)$/.exec(id);
+        if (!match) continue;
+        const specRelative = path.join('openspec', 'specs', match[1], 'spec.md');
+        let text;
+        try { text = readLocal(root, specRelative); } catch {
+          throw new Error(`spec requirement ${id} not resolvable: missing ${specRelative}`);
+        }
+        if (!text.split(/\r?\n/).some(line => line.trim() === `### Requirement: ${match[2]}`)) {
+          throw new Error(`spec requirement ${id} not resolvable: heading '### Requirement: ${match[2]}' absent from ${specRelative}`);
+        }
+      }
+    }
+  }
   if (projection && values.view === 'contract' && !projection.testContract) throw new Error('unresolved design has no runnable TestContract');
   const output = projection && values.view === 'testpack' ? projection.testPack : projection && values.view === 'contract' ? projection.testContract : result;
   process.stdout.write(`${JSON.stringify(ordered(output), null, 2)}\n`);
