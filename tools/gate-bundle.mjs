@@ -39,6 +39,7 @@ import { pathToFileURL } from 'node:url';
 import { createLaunchAuthority, admitEvidence, envelopeDigest } from '../lib/delivery/evidence.js';
 import { taskDefinitionDigest } from '../lib/delivery/baseline.js';
 import { evaluate } from '../lib/delivery/gate.js';
+import { compileDomainCases, mergeDomainCaseConfigs, verifyDomainCaseProjection } from '../lib/delivery/domain-cases.js';
 import { createProtectedHostPorts } from '../lib/adapters/comet-host-ports.js';
 
 const sha256 = (d) => createHash('sha256').update(d).digest('hex');
@@ -92,7 +93,7 @@ export function readRunView(claimRaw, actionId) {
 }
 
 function parseArgv(argv) {
-  const opts = { gate: null, action: null, claim: null, openEvidence: null, args: null, project: process.cwd(), cometRoot: null, checkOnly: false, verdict: null, reason: null, planBundle: null, testContract: null };
+  const opts = { gate: null, action: null, claim: null, openEvidence: null, args: null, project: process.cwd(), cometRoot: null, checkOnly: false, verdict: null, reason: null, planBundle: null, testContract: null, featureMap: null };
   for (let i = 0; i < argv.length; i++) {
     const k = argv[i];
     if (k === '--gate') opts.gate = canonicalGate(argv[++i]);
@@ -107,14 +108,81 @@ function parseArgv(argv) {
     else if (k === '--reason') opts.reason = argv[++i];
     else if (k === '--plan-bundle') opts.planBundle = argv[++i];
     else if (k === '--test-contract') opts.testContract = argv[++i];
+    else if (k === '--feature-map') opts.featureMap = argv[++i];
     else if (k === '--help' || k === '-h') opts.help = true;
   }
   return opts;
 }
 
+// T 门构造期机械复验（proposal v2.5 §2 四件事，纯读取、零副作用——任何失败在 authority
+// 落盘/收据签发之前拒绝构造）：
+//  (a) contract 内嵌 pack 规范化 digest === 盘上 ② pack 同式重算（envelopeDigest 于解析后对象）；
+//  (b) 重跑 verifyDomainCaseProjection——深比较覆盖 testPack 内嵌覆盖矩阵字段；
+//  (c) --feature-map 文件字节 sha256 必须已注册于 contract dependencyBaselines；
+//  (d) 覆盖矩阵专属条目 digest === envelopeDigest(重算矩阵)。
+export async function buildTConstructionEvidence({ project, runId, testContractPath, featureMapPath }) {
+  const contractRaw = readFileSync(testContractPath, 'utf8');
+  const contractParsed = JSON.parse(contractRaw);
+  const baselines = contractParsed?.dependencyBaselines ?? [];
+  const packEntry = baselines.find(item => item.kind === 'domain-cases/v1:testpack');
+  if (!packEntry) throw new Error('T 构造期复验：contract 缺 domain-cases/v1:testpack baseline 条目');
+  const changeDirRel = `openspec/changes/${runId}`;
+  const packRel = `${changeDirRel}/tests/test-pack.json`;
+  let packRaw;
+  try { packRaw = readFileSync(path.join(project, packRel)); } catch {
+    throw new Error(`T 构造期复验：② 投影产物缺席（${packRel}）——先经 compile-domain-cases 投影再构造`);
+  }
+  if (envelopeDigest(JSON.parse(packRaw.toString('utf8'))) !== packEntry.digest) {
+    throw new Error('T 构造期复验 (a)：盘上 pack 漂移（envelopeDigest 与 contract 内嵌 baseline 失配）');
+  }
+  const caseFile = `${changeDirRel}/tests/domain-cases.md`;
+  const config2Rel = `${changeDirRel}/tests/domain-cases.config.json`;
+  let config2;
+  try { config2 = JSON.parse(readFileSync(path.join(project, config2Rel), 'utf8')); } catch {
+    throw new Error(`T 构造期复验：变更级投影配置缺席（${config2Rel}）`);
+  }
+  const config1Path = path.join(project, 'tests/domain-cases/domain-cases.config.json');
+  const config1 = existsSync(config1Path) ? JSON.parse(readFileSync(config1Path, 'utf8')) : null;
+  const merged = mergeDomainCaseConfigs(config1, config2);
+  if (!existsSync(path.join(project, caseFile))) {
+    throw new Error(`T 构造期复验：cases 缺席（${caseFile}）`);
+  }
+  const fresh = compileDomainCases({ projectRoot: project, caseFile, config: merged });
+  const matrixEntry = baselines.find(item => item.kind === 'domain-cases/v1:feature-coverage-matrix');
+  if (!matrixEntry) throw new Error('T 构造期复验 (d)：contract 缺 feature-coverage-matrix 专属条目（旧契约须以新编译器重出）');
+  if (matrixEntry.digest !== envelopeDigest(fresh.testPack.feature_coverage_matrix)) {
+    throw new Error('T 构造期复验 (d)：覆盖矩阵 digest 漂移');
+  }
+  const reverify = verifyDomainCaseProjection({
+    projection: { ...fresh, testPack: JSON.parse(packRaw.toString('utf8')), testContract: contractParsed },
+    projectRoot: project, caseFile, config: merged,
+  });
+  if (!reverify.ok) throw new Error('T 构造期复验 (b)：投影重算漂移（cases/config/features.md 与盘上 pack/contract 不一致）');
+  if (featureMapPath) {
+    const bytes = readFileSync(featureMapPath);
+    if (!baselines.some(item => item.digest === sha256(bytes))) {
+      throw new Error('T 构造期复验 (c)：--feature-map 文件未注册于 contract dependencyBaselines（features.md 必须先入 basis）');
+    }
+  }
+  return {
+    contractParsed,
+    contractDigest: envelopeDigest(contractParsed),
+    snapshotFiles: [
+      { ref: '.sdd/delivery/gates/t/test-pack.snapshot.json', bytes: packRaw },
+      { ref: '.sdd/delivery/gates/t/test-contract.snapshot.json', bytes: Buffer.from(contractRaw, 'utf8') },
+    ],
+  };
+}
+
 export async function buildGateBundle(opts, { now = () => new Date().toISOString(), clock = Date.now } = {}) {
   const defaults = GATE_DEFAULTS[canonicalGate(opts.gate)];
   if (!defaults) throw new Error(`--gate 必须是 ${Object.keys(GATE_DEFAULTS).join('/')} 之一`);
+  // 旗标-门矩阵（proposal v2.5 §2，拒收落在构造期工具——gate.js 对 Kp/V 无条件 parse，
+  // 拒收不落在这里就是制度化永败断言）：T 必填缺件拒；其余门传入即拒。V/Kp 的契约观察
+  // 收据改读 T 快照链（.sdd/delivery/gates/t/test-contract.snapshot.json，同源重构）。
+  if (opts.gate === 'T' && !opts.testContract) throw new Error('T 门构造必须带 --test-contract（T 必填缺件拒，AC-2）');
+  if (opts.gate !== 'T' && opts.testContract) throw new Error(`--test-contract 仅 T 门接受（旗标-门矩阵：${opts.gate} 传入即拒，拒收落在构造期）`);
+  if (opts.gate === 'T' && !existsSync(opts.testContract)) throw new Error(`--test-contract 文件不存在: ${opts.testContract}`);
   for (const [key, file] of [['claim', opts.claim], ['args', opts.args], ['open-evidence', opts.openEvidence]]) {
     if (!file) throw new Error(`缺少 --${key}`);
     if (!existsSync(file)) throw new Error(`--${key} 文件不存在: ${file}`);
@@ -131,6 +199,11 @@ export async function buildGateBundle(opts, { now = () => new Date().toISOString
   const { cur, action } = readRunView(claimRaw, opts.action);
   const runId = cur.runId ?? opts.action.split(':')[0];
   const changeDir = path.join(opts.project, 'openspec/changes', runId);
+  // T 构造期复验（纯读取）：在 authority 落盘与收据签发之前完成 (a)(b)(c)(d)，任一失败
+  // 拒绝构造——TOCTOU 堵口（判定对象 = 复验通过时盘上的 ② 产物字节）。
+  const tConstruction = opts.gate === 'T'
+    ? await buildTConstructionEvidence({ project: opts.project, runId, testContractPath: opts.testContract, featureMapPath: opts.featureMap })
+    : null;
   const openEvidence = JSON.parse(readFileSync(opts.openEvidence, 'utf8'));
   const inputDigest = openEvidence.contentHash ?? openEvidence.output?.contentHash;
   if (!inputDigest) throw new Error('--open-evidence 里没有 contentHash（open-complete 证据事件的哈希）');
@@ -233,6 +306,7 @@ export async function buildGateBundle(opts, { now = () => new Date().toISOString
       reportDigest: binding.reportDigest, actionDigest: binding.actionDigest,
       evidenceDigest: sha256(reviewerBytes),
       ...planReviewBinding,
+      ...(tConstruction ? { contractDigest: tConstruction.contractDigest } : {}),
     } },
     facts: { principal: A.reviewerId, ...binding,
       observations: [{ caseId, check, command: `independent read-only review (claude subagent transcript) of ${check}`, result: 'pass', executions: { total: 1, valid: 1 } }] },
@@ -255,8 +329,11 @@ export async function buildGateBundle(opts, { now = () => new Date().toISOString
   // 同一独立复核者出两份。authority entries 同步追加观察条目。
   let extraEntry = null;
   let extraAuthorityEntry = null;
-  if ((opts.gate === 'V' || opts.gate === 'Kp') && opts.testContract) {
-    const tc = existsSync(opts.testContract) ? JSON.parse(readFileSync(opts.testContract, 'utf8')) : null;
+  if (opts.gate === 'V' || opts.gate === 'Kp') {
+    // 契约观察收据的契约来源 = T 快照链同源重构（旗标-门矩阵：--test-contract 已对 V/Kp
+    // 构造期拒收；T 束构造时落盘 .sdd/delivery/gates/t/test-contract.snapshot.json）。
+    const snapshotPath = path.join(opts.project, '.sdd/delivery/gates/t/test-contract.snapshot.json');
+    const tc = existsSync(snapshotPath) ? JSON.parse(readFileSync(snapshotPath, 'utf8')) : null;
     const obsCase = tc?.requiredChecks?.[0]?.caseIds?.[0] ?? tc?.cases?.[0]?.id;
     const obsCheck = tc?.requiredChecks?.[0]?.capability;
     const obsCommand = tc?.requiredChecks?.[0]?.command;
@@ -367,7 +444,7 @@ export async function buildGateBundle(opts, { now = () => new Date().toISOString
   }
   if (opts.testContract) {
     if (!existsSync(opts.testContract)) throw new Error(`--test-contract 文件不存在: ${opts.testContract}`);
-    inputs.testContract = JSON.parse(readFileSync(opts.testContract, 'utf8'));
+    inputs.testContract = tConstruction ? tConstruction.contractParsed : JSON.parse(readFileSync(opts.testContract, 'utf8'));
   }
   const runInput = action.input?.input ?? action.input;
   const gateOk = ports.verifyGateInputs({ run: { runId, input: runInput, state: { phase: cur.phase ?? 'open' }, actions: cur.actions }, action, gate: opts.gate, inputs, policy });
@@ -386,8 +463,10 @@ export async function buildGateBundle(opts, { now = () => new Date().toISOString
 
   const artifactRef = `.sdd/delivery/gates/${defaults.dir}/receipt-bundle.json`;
   const bytes = buildBundleBytes({ gate: opts.gate, artifactRef, inputs, receipts: allEntries, policy, verdict, evaluatedBy: `sdd.delivery.gate.${opts.gate.toLowerCase()}@1 (packaged bindings -> lib/delivery/gate.js evaluate)` });
-  const outcome = { status: 'succeeded', output: { verdict: 'pass', sourceHash: null, artifactHashes: { [artifactRef]: sha256(bytes) }, gateEvidence: { gate: opts.gate, inputs, receipts: allEntries, policy } } };
-  return { runId, artifactRef, bytes, outcome, appDir: APP };
+  const artifactHashes = { [artifactRef]: sha256(bytes) };
+  for (const snapshot of tConstruction?.snapshotFiles ?? []) artifactHashes[snapshot.ref] = sha256(snapshot.bytes);
+  const outcome = { status: 'succeeded', output: { verdict: 'pass', sourceHash: null, artifactHashes, gateEvidence: { gate: opts.gate, inputs, receipts: allEntries, policy } } };
+  return { runId, artifactRef, bytes, outcome, appDir: APP, snapshotFiles: tConstruction?.snapshotFiles ?? [] };
 }
 
 // 束字节构造（纯函数，B-③：同证据同字节——canonical 键序 + 固定 evaluatedBy）。
@@ -459,6 +538,11 @@ async function main() {
     if (!opts.checkOnly) {
       mkdirSync(path.dirname(artifactAbs), { recursive: true });
       writeFileSync(artifactAbs, built.bytes);
+      for (const snapshot of built.snapshotFiles ?? []) {
+        const snapAbs = path.join(opts.project, snapshot.ref);
+        mkdirSync(path.dirname(snapAbs), { recursive: true });
+        writeFileSync(snapAbs, snapshot.bytes);
+      }
     }
     const outcomeFile = await withRuntimeHash(opts, async (hashRuntimeValue) => {
       const claimRaw = JSON.parse(readFileSync(opts.claim, 'utf8'));

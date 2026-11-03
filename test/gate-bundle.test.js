@@ -261,3 +261,108 @@ test('resolveCometRuntimeJson: explicit fake root resolves; garbage root refuses
   assert.equal(tool.resolveCometRuntimeJson(path.join(root, 'nope')), null);
   fs.rmSync(root, { recursive: true, force: true });
 });
+
+// ---- v2.5 AC-4：旗标-门矩阵（工具级拒收）+ AC-2：T 构造期机械复验 ----
+
+import { compileDomainCases, mergeDomainCaseConfigs } from '../lib/delivery/domain-cases.js';
+
+test('flag-gate matrix (tool level): --test-contract refused for all five non-T gates; T without it refuses', async () => {
+  const dummy = path.join(repoRoot, 'package.json');
+  for (const gate of ['R', 'A', 'P', 'V', 'Kp']) {
+    await assert.rejects(() => tool.buildGateBundle({ gate, testContract: dummy }),
+      /--test-contract 仅 T 门接受/, `${gate} 必须在构造期拒收 --test-contract`);
+  }
+  await assert.rejects(() => tool.buildGateBundle({ gate: 'T' }),
+    /T 门构造必须带 --test-contract/, 'T 必填缺件拒');
+  await assert.rejects(() => tool.buildGateBundle({ gate: 'T', testContract: path.join(repoRoot, 'test', 'no-such-contract.json') }),
+    /--test-contract 文件不存在/, 'T 契约文件缺席硬拒');
+});
+
+function tFixture() {
+  const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'sdd-gate-bundle-t-')));
+  fs.writeFileSync(path.join(root, 'features.md'), '# Features\nF-REQ-1: read item\n');
+  fs.writeFileSync(path.join(root, 'design.md'), '# Design\nRead via public API.\n');
+  fs.mkdirSync(path.join(root, 'openspec/changes/t-change/tests'), { recursive: true });
+  fs.writeFileSync(path.join(root, 'openspec/changes/t-change/tests/domain-cases.md'),
+    `<!-- domain-cases/v1 -->\n# Domain cases\n\n### TC-READ-1 — Read item\n\n- **Requirement IDs**: F-REQ-1\n- **Acceptance**: AC-1\n- **Dimensions**: Journey-A\n- **Level**: api\n- **Priority**: P1\n- **Precondition**: User is permitted\n- **Input**: Item exists\n- **Step**: Request the item\n- **Expected**: The item is returned\n- **Oracle basis**: F-REQ-1\n- **Oracle authority**: Public API response\n- **Cleanup**: Remove fixture data\n- **Evidence**: Request and response\n- **Check ID**: read-item\n`);
+  const library = { basis: [{ id: 'F-REQ-1', kind: 'requirement', path: 'features.md' }],
+    dimensions: Object.fromEntries('ABCDEFGHIJ'.split('').map(c => [`Journey-${c}`, {
+      required: c === 'A', reason: c === 'A' ? 'Required by F-REQ-1' : 'Not applicable', basis_ids: ['F-REQ-1'],
+    }])) };
+  const change = { project: 't-fixture', change: 't-change', mode: 'design', design_basis_id: 'DESIGN-1',
+    basis: [{ id: 'DESIGN-1', kind: 'source', path: 'design.md' }],
+    checks: [{ id: 'read-item', level: 'api', capability: 'api:read', command: 'node --test read.test.js' }],
+    cleanup: { environment: 'Dispose', data: 'Remove' } };
+  fs.mkdirSync(path.join(root, 'tests/domain-cases'), { recursive: true });
+  fs.writeFileSync(path.join(root, 'tests/domain-cases/domain-cases.config.json'), JSON.stringify(library));
+  fs.writeFileSync(path.join(root, 'openspec/changes/t-change/tests/domain-cases.config.json'), JSON.stringify(change));
+  const result = compileDomainCases({ projectRoot: root, caseFile: 'openspec/changes/t-change/tests/domain-cases.md',
+    config: mergeDomainCaseConfigs(library, change) });
+  fs.writeFileSync(path.join(root, 'openspec/changes/t-change/tests/test-pack.json'), JSON.stringify(result.testPack));
+  const contractPath = path.join(root, 'openspec/changes/t-change/tests/test-contract.json');
+  fs.writeFileSync(contractPath, JSON.stringify(result.testContract));
+  return { root, contractPath, dispose: () => fs.rmSync(root, { recursive: true, force: true }) };
+}
+
+test('T construction re-verification: happy path binds contractDigest and snapshot bytes', async () => {
+  const f = tFixture();
+  try {
+    const evidence = await tool.buildTConstructionEvidence({ project: f.root, runId: 't-change', testContractPath: f.contractPath });
+    assert.match(evidence.contractDigest, /^[a-f0-9]{64}$/);
+    assert.deepEqual(evidence.snapshotFiles.map(s => s.ref),
+      ['.sdd/delivery/gates/t/test-pack.snapshot.json', '.sdd/delivery/gates/t/test-contract.snapshot.json']);
+    const packSnap = JSON.parse(evidence.snapshotFiles[0].bytes.toString('utf8'));
+    assert.equal(packSnap.cases[0].id, 'TC-READ-1', '快照 = ② 盘上产物拷贝');
+  } finally { f.dispose(); }
+});
+
+test('T construction re-verification refusal paths: pack drift, missing anchors, source drift, matrix drift, feature-map unregistered', async () => {
+  const f = tFixture();
+  try {
+    // (a) 盘上 pack 篡改
+    const packPath = path.join(f.root, 'openspec/changes/t-change/tests/test-pack.json');
+    const packRaw = fs.readFileSync(packPath, 'utf8');
+    fs.writeFileSync(packPath, packRaw.replace('TC-READ-1', 'TC-HACK-1'));
+    await assert.rejects(() => tool.buildTConstructionEvidence({ project: f.root, runId: 't-change', testContractPath: f.contractPath }),
+      /盘上 pack 漂移/, '(a) 篡改必须拒');
+    fs.writeFileSync(packPath, packRaw);
+    // (a) pack 缺席
+    fs.rmSync(packPath);
+    await assert.rejects(() => tool.buildTConstructionEvidence({ project: f.root, runId: 't-change', testContractPath: f.contractPath }),
+      /投影产物缺席/);
+    fs.writeFileSync(packPath, packRaw);
+    // ② config 缺席
+    const config2Path = path.join(f.root, 'openspec/changes/t-change/tests/domain-cases.config.json');
+    const config2Raw = fs.readFileSync(config2Path, 'utf8');
+    fs.rmSync(config2Path);
+    await assert.rejects(() => tool.buildTConstructionEvidence({ project: f.root, runId: 't-change', testContractPath: f.contractPath }),
+      /变更级投影配置缺席/);
+    fs.writeFileSync(config2Path, config2Raw);
+    // (b) 源漂移（features.md 变字节 → 重算失配）
+    fs.appendFileSync(path.join(f.root, 'features.md'), 'drift\n');
+    await assert.rejects(() => tool.buildTConstructionEvidence({ project: f.root, runId: 't-change', testContractPath: f.contractPath }),
+      /投影重算漂移/, '(b) 源漂移必须拒');
+    fs.writeFileSync(path.join(f.root, 'features.md'), '# Features\nF-REQ-1: read item\n');
+    // (d) 矩阵 digest 篡改
+    const contractRaw = fs.readFileSync(f.contractPath, 'utf8');
+    const tampered = JSON.parse(contractRaw);
+    const matrixEntry = tampered.dependencyBaselines.find(b => b.kind === 'domain-cases/v1:feature-coverage-matrix');
+    matrixEntry.digest = '0'.repeat(64);
+    fs.writeFileSync(f.contractPath, JSON.stringify(tampered));
+    await assert.rejects(() => tool.buildTConstructionEvidence({ project: f.root, runId: 't-change', testContractPath: f.contractPath }),
+      /覆盖矩阵 digest 漂移/, '(d) 矩阵篡改必须拒');
+    // (d) 矩阵条目缺席
+    delete tampered.dependencyBaselines.splice(tampered.dependencyBaselines.findIndex(b => b.kind === 'domain-cases/v1:feature-coverage-matrix'), 1);
+    fs.writeFileSync(f.contractPath, JSON.stringify(tampered));
+    await assert.rejects(() => tool.buildTConstructionEvidence({ project: f.root, runId: 't-change', testContractPath: f.contractPath }),
+      /缺 feature-coverage-matrix 专属条目/);
+    fs.writeFileSync(f.contractPath, contractRaw);
+    // (c) --feature-map 未注册
+    fs.writeFileSync(path.join(f.root, 'other-features.md'), '# Other\n');
+    await assert.rejects(() => tool.buildTConstructionEvidence({ project: f.root, runId: 't-change', testContractPath: f.contractPath, featureMapPath: path.join(f.root, 'other-features.md') }),
+      /--feature-map 文件未注册/, '(c) 未注册 feature map 必须拒');
+    // (c) 已注册 features.md → 通过
+    const ok = await tool.buildTConstructionEvidence({ project: f.root, runId: 't-change', testContractPath: f.contractPath, featureMapPath: path.join(f.root, 'features.md') });
+    assert.match(ok.contractDigest, /^[a-f0-9]{64}$/);
+  } finally { f.dispose(); }
+});
