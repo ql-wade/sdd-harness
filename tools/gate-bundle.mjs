@@ -164,6 +164,22 @@ export async function buildTConstructionEvidence({ project, runId, testContractP
       throw new Error('T 构造期复验 (c)：--feature-map 文件未注册于 contract dependencyBaselines（features.md 必须先入 basis）');
     }
   }
+  // KB 发布回执（AC-5，非强制——缺席不记录；在场但失配必须拒：runId/change 与当前 Run
+  // 一致 + 正本 digest 与盘上字节一致，堵跨 Run/变更复制）。
+  let kbReceipt;
+  const receiptRel = '.sdd/delivery/gates/t/kb-publish-receipt.json';
+  const receiptPath = path.join(project, receiptRel);
+  if (existsSync(receiptPath)) {
+    const receipt = JSON.parse(readFileSync(receiptPath, 'utf8'));
+    if (receipt?.schema !== 'sdd.delivery.kb-publish-receipt.v1' || receipt.runId !== runId || receipt.change !== runId) {
+      throw new Error('KB 发布回执与当前 Run 绑定失配（runId/change 不一致——疑似跨 Run/变更复制）');
+    }
+    const sourceBytes = readFileSync(path.join(project, receipt.source?.path ?? ''));
+    if (sha256(sourceBytes) !== receipt.source?.sha256) {
+      throw new Error('KB 发布回执正本 digest 失配（source.sha256 与盘上字节不一致）');
+    }
+    kbReceipt = { ref: receiptRel, runId: receipt.runId, change: receipt.change, sourceDigest: receipt.source.sha256 };
+  }
   return {
     contractParsed,
     contractDigest: envelopeDigest(contractParsed),
@@ -171,6 +187,7 @@ export async function buildTConstructionEvidence({ project, runId, testContractP
       { ref: '.sdd/delivery/gates/t/test-pack.snapshot.json', bytes: packRaw },
       { ref: '.sdd/delivery/gates/t/test-contract.snapshot.json', bytes: Buffer.from(contractRaw, 'utf8') },
     ],
+    kbReceipt,
   };
 }
 
@@ -465,7 +482,9 @@ export async function buildGateBundle(opts, { now = () => new Date().toISOString
   const bytes = buildBundleBytes({ gate: opts.gate, artifactRef, inputs, receipts: allEntries, policy, verdict, evaluatedBy: `sdd.delivery.gate.${opts.gate.toLowerCase()}@1 (packaged bindings -> lib/delivery/gate.js evaluate)` });
   const artifactHashes = { [artifactRef]: sha256(bytes) };
   for (const snapshot of tConstruction?.snapshotFiles ?? []) artifactHashes[snapshot.ref] = sha256(snapshot.bytes);
-  const outcome = { status: 'succeeded', output: { verdict: 'pass', sourceHash: null, artifactHashes, gateEvidence: { gate: opts.gate, inputs, receipts: allEntries, policy } } };
+  const gateEvidence = { gate: opts.gate, inputs, receipts: allEntries, policy };
+  if (tConstruction?.kbReceipt) gateEvidence.kbReceipt = tConstruction.kbReceipt;
+  const outcome = { status: 'succeeded', output: { verdict: 'pass', sourceHash: null, artifactHashes, gateEvidence } };
   return { runId, artifactRef, bytes, outcome, appDir: APP, snapshotFiles: tConstruction?.snapshotFiles ?? [] };
 }
 

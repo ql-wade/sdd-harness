@@ -366,3 +366,64 @@ test('T construction re-verification refusal paths: pack drift, missing anchors,
     assert.match(ok.contractDigest, /^[a-f0-9]{64}$/);
   } finally { f.dispose(); }
 });
+
+// ---- v2.5 AC-5：KB 发布回执（present-but-wrong 必拒；缺席不强制） ----
+
+import crypto from 'node:crypto';
+const kbHash = (bytes) => crypto.createHash('sha256').update(bytes).digest('hex');
+
+test('KB publish receipt: valid receipt recorded in gateEvidence, wrong-run receipt refused, absent receipt fine', async () => {
+  const f = tFixture();
+  try {
+    const evidence = await tool.buildTConstructionEvidence({ project: f.root, runId: 't-change', testContractPath: f.contractPath });
+    assert.equal(evidence.kbReceipt, undefined, '无回执 = 不强制、无 gateEvidence 字段');
+    const sourceRel = 'tests/domain-cases/domain-cases.config.json';
+    const receipt = {
+      schema: 'sdd.delivery.kb-publish-receipt.v1', runId: 't-change', change: 't-change',
+      page: { path: 'wiki/testing/t-change-domain-cases', sha256: kbHash('page-bytes') },
+      source: { path: sourceRel, sha256: kbHash(fs.readFileSync(path.join(f.root, sourceRel))) },
+      publishedAt: '2026-11-04T00:00:00.000Z',
+    };
+    const receiptPath = path.join(f.root, '.sdd/delivery/gates/t/kb-publish-receipt.json');
+    fs.mkdirSync(path.dirname(receiptPath), { recursive: true });
+    fs.writeFileSync(receiptPath, JSON.stringify(receipt));
+    const withReceipt = await tool.buildTConstructionEvidence({ project: f.root, runId: 't-change', testContractPath: f.contractPath });
+    assert.deepEqual(withReceipt.kbReceipt, { ref: '.sdd/delivery/gates/t/kb-publish-receipt.json', runId: 't-change', change: 't-change', sourceDigest: receipt.source.sha256 });
+    // 跨 Run 复制（runId 不符）→ 拒
+    fs.writeFileSync(receiptPath, JSON.stringify({ ...receipt, runId: 'other-run' }));
+    await assert.rejects(() => tool.buildTConstructionEvidence({ project: f.root, runId: 't-change', testContractPath: f.contractPath }),
+      /与当前 Run 绑定失配/, '回执 runId 失配必须拒（堵跨 Run 复制）');
+    // 正本 digest 失配 → 拒
+    fs.writeFileSync(receiptPath, JSON.stringify({ ...receipt, source: { path: sourceRel, sha256: 'f'.repeat(64) } }));
+    await assert.rejects(() => tool.buildTConstructionEvidence({ project: f.root, runId: 't-change', testContractPath: f.contractPath }),
+      /正本 digest 失配/, '回执正本 digest 失配必须拒');
+  } finally { f.dispose(); }
+});
+
+test('kb-receipt compare script: valid receipt + page read-back pass, tampered page digest refuses', async () => {
+  const { spawnSync } = await import('node:child_process');
+  const f = tFixture();
+  try {
+    const sourceRel = 'tests/domain-cases/domain-cases.config.json';
+    const sourceDigest = kbHash(fs.readFileSync(path.join(f.root, sourceRel)));
+    const receiptPath = path.join(f.root, '.sdd/delivery/gates/t/kb-publish-receipt.json');
+    fs.mkdirSync(path.dirname(receiptPath), { recursive: true });
+    fs.writeFileSync(receiptPath, JSON.stringify({
+      schema: 'sdd.delivery.kb-publish-receipt.v1', runId: 't-change', change: 't-change',
+      page: { path: 'wiki/testing/t-change', sha256: kbHash('page') },
+      source: { path: sourceRel, sha256: sourceDigest }, publishedAt: '2026-11-04T00:00:00.000Z',
+    }));
+    const pagePath = path.join(f.root, 'kb-page.md');
+    fs.writeFileSync(pagePath, `---\ndigest: ${sourceDigest}\n---\n# t-change domain cases\n`);
+    const cli = path.join(repoRoot, 'tools', 'test-cases', 'verify-kb-receipt.mjs');
+    const ok = spawnSync('node', [cli, '--project', f.root, '--run-id', 't-change', '--page', pagePath], { encoding: 'utf8' });
+    assert.equal(ok.status, 0, ok.stderr);
+    fs.writeFileSync(pagePath, `---\ndigest: ${'0'.repeat(64)}\n---\n# tampered\n`);
+    const bad = spawnSync('node', [cli, '--project', f.root, '--run-id', 't-change', '--page', pagePath], { encoding: 'utf8' });
+    assert.equal(bad.status, 1);
+    assert.match(bad.stderr, /页面记录 digest.*≠ 回执正本 digest/, '页读回比对必须拒绝失配');
+    const wrongRun = spawnSync('node', [cli, '--project', f.root, '--run-id', 'other-run'], { encoding: 'utf8' });
+    assert.equal(wrongRun.status, 1);
+    assert.match(wrongRun.stderr, /绑定失配/);
+  } finally { f.dispose(); }
+});
