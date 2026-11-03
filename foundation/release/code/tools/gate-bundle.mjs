@@ -37,6 +37,7 @@ import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { createLaunchAuthority, admitEvidence, envelopeDigest } from '../lib/delivery/evidence.js';
+import { taskDefinitionDigest } from '../lib/delivery/baseline.js';
 import { evaluate } from '../lib/delivery/gate.js';
 import { createProtectedHostPorts } from '../lib/adapters/comet-host-ports.js';
 
@@ -208,7 +209,7 @@ export async function buildGateBundle(opts, { now = () => new Date().toISOString
     planReviewBinding = {
       change: runId,
       planDigest: envelopeDigest(planBundleParsed),
-      tasksDigest: sha256(readFileSync(path.join(opts.project, changeDirRel, 'tasks.md'))),
+      tasksDigest: taskDefinitionDigest(readFileSync(path.join(opts.project, changeDirRel, 'tasks.md'), 'utf8')),
       dagDigest: sha256(readFileSync(path.join(opts.project, changeDirRel, 'task-dag.json'))),
     };
   }
@@ -242,6 +243,75 @@ export async function buildGateBundle(opts, { now = () => new Date().toISOString
   const integrity = createHmac('sha256', secret).update(canonicalJson({ ...body, collectionId })).digest('hex');
   const collection = { ...body, collectionId, integrity };
 
+  // V/Kp 双收据（r7 实证，minecraft-3d-r7 rev147）：gate.js requiredChecks 观察检查需要
+  // 一条独立的「契约观察」收据（caseId/check 取自 testContract 首个 requiredCheck），与
+  // 主白盒确认收据同判——两条收据的 verifyReview kind 都须匹配本门 verifyReview，
+  // 同一独立复核者出两份。authority entries 同步追加观察条目。
+  let extraEntry = null;
+  let extraAuthorityEntry = null;
+  if ((opts.gate === 'V' || opts.gate === 'Kp') && opts.testContract) {
+    const tc = existsSync(opts.testContract) ? JSON.parse(readFileSync(opts.testContract, 'utf8')) : null;
+    const obsCase = tc?.requiredChecks?.[0]?.caseIds?.[0] ?? tc?.cases?.[0]?.id;
+    const obsCheck = tc?.requiredChecks?.[0]?.capability;
+    const obsCommand = tc?.requiredChecks?.[0]?.command;
+    if (obsCase && obsCheck && obsCommand) {
+      const exec2 = `${actionBinding.execution}-obs`;
+      const binding2 = { ...actionBinding, execution: exec2 };
+      const dispatch2 = authority.issueDispatch({
+        runnerId: actionBinding.runnerId, run: runId, gate: opts.gate,
+        inputDigest, policyDigest: policy.digest, attempt: 1, epoch: 0,
+        role: 'verifier', execution: exec2, actionBinding: binding2,
+      });
+      const launch2 = { launchId: randomUUID(), execution: exec2 };
+      const envelope2 = { ...envelope, caseId: obsCase, check: obsCheck, execution: { id: exec2 } };
+      const bindingObs = {
+        actionDigest: sha256(canonicalJson(dispatch2.actionBinding)),
+        dispatchDigest: sha256(canonicalJson(dispatch2)),
+        envelopeDigest: envelopeDigest(envelope2),
+        launchDigest: sha256(canonicalJson(launch2)),
+        reportDigest: binding.reportDigest, resultDigest: sha256(resultBytes), methodTraceDigest: sha256(methodTraceBytes),
+        run: dispatch2.run, execution: dispatch2.execution, launchId: launch2.launchId,
+        environmentDigest: dispatch2.actionBinding.environmentDigest,
+      };
+      const source2 = {
+        ok: true, qualification,
+        reportDigest: bindingObs.reportDigest, actionDigest: bindingObs.actionDigest,
+        independentReview: { claude: {
+          sessionPath: path.resolve(A.reviewerTranscript), transcriptId: A.reviewerId, statementDigest,
+          kind: reviewKind, envelopeDigest: envelopeDigest(envelope2),
+          reportDigest: bindingObs.reportDigest, actionDigest: bindingObs.actionDigest,
+          evidenceDigest: sha256(reviewerBytes),
+        } },
+        facts: { principal: A.reviewerId, ...bindingObs,
+          observations: [{ caseId: obsCase, check: obsCheck, command: obsCommand, result: 'pass', executions: { total: 1, valid: 1 } }] },
+      };
+      const body2 = { domain: 'SDD.Delivery.CollectedResult.v1', ...bindingObs, source: source2,
+        host: { claude: {
+          sessionPath: A.hostSessionPath ?? `${process.env.HOME}/.claude/projects/${opts.project.replaceAll('/', '-')}/${hostSession}.jsonl`,
+          transcriptId: hostSession,
+          commandDigest: sha256(A.hostCommand ?? 'node tools/gate-bundle.mjs'),
+        } } };
+      const collectionId2 = sha256(canonicalJson(body2));
+      const integrity2 = createHmac('sha256', secret).update(canonicalJson({ ...body2, collectionId: collectionId2 })).digest('hex');
+      const collection2 = { ...body2, collectionId: collectionId2, integrity: integrity2 };
+      const admitted2 = admitEvidence({ dispatch: dispatch2, envelope: envelope2, launchRecord: launch2, reportBytes, resultBytes, methodTraceBytes, collection: collection2 }, {
+        requireManaged: true, authority, actionBinding: binding2, sourceQualification: qualification,
+        purpose: 'independent-acceptance', environment,
+        builderExecution, builderPrincipal: hostSession,
+        authoringExecutions: [builderExecution], authoringPrincipals: [hostSession],
+        consumedCollections: [], issuedExecutions: [], now: now(),
+      });
+      if (!admitted2.ok) { const e = new Error(`ADMISSION REFUSED (obs): ${admitted2.error} - ${admitted2.reason ?? ''}`); e.admission = admitted2; throw e; }
+      extraEntry = admitted2.entry;
+      extraAuthorityEntry = {
+        runId, gate: opts.gate, secret, actionDigest: bindingObs.actionDigest,
+        actionBinding: binding2, sourceQualification: qualification,
+        authoringExecutions: [builderExecution], authoringPrincipals: [hostSession],
+        environment,
+      };
+    }
+  }
+
   const admitted = admitEvidence({ dispatch, envelope, launchRecord, reportBytes, resultBytes, methodTraceBytes, collection }, {
     requireManaged: true, authority, actionBinding, sourceQualification: qualification,
     purpose: 'independent-acceptance', environment,
@@ -274,6 +344,7 @@ export async function buildGateBundle(opts, { now = () => new Date().toISOString
   };
   const entries = previousEntries.filter((e) => !(e.gate === authorityEntry.gate && e.actionDigest === authorityEntry.actionDigest));
   entries.push(authorityEntry);
+  if (extraAuthorityEntry) entries.push(extraAuthorityEntry);
   writeFileSync(authorityPath, JSON.stringify({ runId, environment, entries }, null, 2) + '\n');
 
   const ports = createProtectedHostPorts({ context: { identity: { contentHash: identity.contentHash, runtimeVersion: identity.runtimeVersion }, projectRoot: opts.project } });
@@ -296,7 +367,8 @@ export async function buildGateBundle(opts, { now = () => new Date().toISOString
   const gateOk = ports.verifyGateInputs({ run: { runId, input: runInput, state: { phase: cur.phase ?? 'open' }, actions: cur.actions }, action, gate: opts.gate, inputs, policy });
   if (!gateOk) throw new Error('gate inputs refused——claim/run 形状与当前门不符（核对 claim 是否来自带 session-id 的 claim、input 是否为 Run 平铺 input）');
 
-  const verdict = evaluate(inputs, [entry], policy, {
+  const allEntries = extraEntry ? [entry, extraEntry] : [entry];
+  const verdict = evaluate(inputs, allEntries, policy, {
     requireManaged: true, currentGate: opts.gate, currentRunId: runId,
     currentChange: runId, currentChangeDir: `openspec/changes/${runId}`,
     admissionOptionsFor: ports.admissionOptionsFor, verifyReview: ports.verifyReview,
@@ -307,8 +379,8 @@ export async function buildGateBundle(opts, { now = () => new Date().toISOString
   }
 
   const artifactRef = `.sdd/delivery/gates/${defaults.dir}/receipt-bundle.json`;
-  const bytes = buildBundleBytes({ gate: opts.gate, artifactRef, inputs, receipts: [entry], policy, verdict, evaluatedBy: `sdd.delivery.gate.${opts.gate.toLowerCase()}@1 (packaged bindings -> lib/delivery/gate.js evaluate)` });
-  const outcome = { status: 'succeeded', output: { verdict: 'pass', sourceHash: null, artifactHashes: { [artifactRef]: sha256(bytes) }, gateEvidence: { gate: opts.gate, inputs, receipts: [entry], policy } } };
+  const bytes = buildBundleBytes({ gate: opts.gate, artifactRef, inputs, receipts: allEntries, policy, verdict, evaluatedBy: `sdd.delivery.gate.${opts.gate.toLowerCase()}@1 (packaged bindings -> lib/delivery/gate.js evaluate)` });
+  const outcome = { status: 'succeeded', output: { verdict: 'pass', sourceHash: null, artifactHashes: { [artifactRef]: sha256(bytes) }, gateEvidence: { gate: opts.gate, inputs, receipts: allEntries, policy } } };
   return { runId, artifactRef, bytes, outcome, appDir: APP };
 }
 
