@@ -332,7 +332,8 @@ async function main() {
         expectedRevision: cur.revision,
         commandId: randomUUID(),
         name: opts.verdict,
-        input: null,
+        // 命令校验器要求非空 reason（「请说明修复或需求修订原因」）——input:null 会被拒。
+        input: { reason: opts.reason ?? 'revision requested per gate review' },
       };
       const out = path.join(opts.project, '.sdd', 'delivery', 'gates', `${GATE_DEFAULTS[opts.gate].dir}-revise-command.json`);
       mkdirSync(path.dirname(out), { recursive: true });
