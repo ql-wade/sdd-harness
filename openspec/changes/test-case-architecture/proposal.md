@@ -1,11 +1,13 @@
-# 提案 v2.4：测试用例领域架构（feature map + 人读用例库 + 知识库纳管 + 按门工件契约 + 最佳实践回流）
+# 提案 v2.5：测试用例领域架构（feature map + 人读用例库 + 知识库纳管 + 按门工件契约 + 最佳实践回流）
 
-> 状态：v2.4（三轮共识 2026-11-03 认证收敛：首轮 22 条 → 二轮 28 条 → 三轮 15 条原始
-> findings 合并 7 主题逐字落文〔commit 938cf67〕；核心三 ref 冻结快照设计经席2 对抗攻防
-> 三轮确认成立。v2.4 = v2.3 + 三轮 3 个遗留 minor 闭合 + 三条业界最佳实践增补（§7，
-> delta 终审中）。裁决与处置存档：consensus-round1.md、consensus-round2.md、
-> consensus-round2-progress.md（v2.1 席1 处置）、consensus-round3.md、
-> consensus-round4.md（本轮 delta 终审，评审完成后归档））
+> 状态：v2.5（四轮共识 2026-11-03 收敛：首轮 22 条〔去重口径；存档席位表原始 24 条，
+> 口径对账见 consensus-round4.md〕→ 二轮 28 条 → 三轮 15 条原始合并 7 主题〔938cf67〕
+> → 四轮 delta 终审 12 条〔2 major + 10 minor，无 blocker；席1 REPAIR / 席2 REPAIR /
+> 席3 PASS〕全部逐字落文。核心三 ref 冻结快照设计经四轮对抗确认成立。v2.5 = v2.4 +
+> 终审全部 findings 应用：矩阵宿主钉死、§4 验收节定义、unresolved 机器登记位置写明、
+> PROOF 裁剪标注、计数对账、AC-7 落地标注刷新、step 7 在飞 Run 次序声明。
+> 裁决与处置存档：consensus-round1.md、consensus-round2.md、consensus-round2-progress.md、
+> consensus-round3.md、consensus-round4.md（含最佳实践来源分级存档与计数对账段））
 > 提案人：主会话（sdd-harness 框架侧）；触发：sdd-test 验证实例 r6/r7 T 门实证回流 + 项目所有者架构对齐
 > 关联：delivery-foundation-rearchitecture（父 change）、ADR-0020（知识栈）、ADR-0023（comet 0.5.1）、
 >       test-authoring v1.1.0 domain-cases 约定、whitebox-verify v2.6 交接协议
@@ -80,11 +82,13 @@ unresolved」检查即免费获得 per-F-ID 覆盖强制），`Acceptance: AC-x`
 快照显式替换流程（step 0，必做——首轮席1 finding 3/席3 finding 4 证实现约定下无法
 字面表达，非条件分支）。
 
-**archive 期对齐工作项（二轮席2 finding 2，scaffold lib 可修）**：
-`comet-host-ports.js verifyDomainAutomation` 重算只读活路径 changeDir（:158-168），无
-archive 回退——archive 搬移变更目录后已录 V pass 会被重验翻案（Run 卡死）。本变更对齐
-工作项：为投影重算增加 archive 回退（读归档后 ② 冻结证据，同 admissionOptionsFor
-:372-389 的既有回退模式），含拒绝路径测试（AC-7）。
+**archive 期回退（二轮席2 finding 2）——已落地（8ffcbf2，先于 v2.4；四轮席2 核实
+Archive fallback 在 HEAD :161）**：`comet-host-ports.js verifyDomainAutomation` 投影重算
+archive 回退（读归档后 ② 冻结证据，同 admissionOptionsFor :372-389 既有回退模式）已实现
+并通过回归（18/18，含搬移前篡改即拒）。AC-7 剩余 = 确认在盘回归覆盖本提案判据
+（搬移后重验通过 + 篡改拒绝），无新实现。实施对齐遗留（四轮席3 观察 O1，随 step 1
+编译器扩展落地）：回退当前只读变更级单一 config 直接传入 compileDomainCases，本节
+认证的「① 库级 + ② 变更级两文件合并后传入」尚未执行。
 
 ### 2. 按门工件契约（三层强制：编译期 + 构造期 + record 期 sweep）
 
@@ -92,7 +96,7 @@ archive 回退——archive 搬移变更目录后已录 V pass 会被重验翻�
 |---|---|---|---|
 | R | proposal.md | requirements-scope-confirmation（:242） | 现状已满足（双轨 AC 为 §7 增补 A 约定层增强，不动门机器） |
 | A | design.md | grill-exact-unanimous-consensus（:239） | 维持现状，随各门实证对齐 |
-| **T** | **三 ref 快照（束 + pack 快照 + contract 快照；覆盖矩阵 digest 随 contract.dependencyBaselines 同链绑定——三 ref 结构不变，§7 增补 C）** | independent-test-design-review（:235） | **本变更交付** |
+| **T** | **三 ref 快照（束 + pack 快照 + contract 快照；覆盖矩阵 = testPack 内嵌生成字段 + dependencyBaselines 专属条目——三 ref 结构不变，§7 增补 C）** | independent-test-design-review（:235） | **本变更交付** |
 | P | task-dag.json 快照 | plan-unique-review（:245） | 维持现状（r7 已实证配方），随 gate-bundle 统一 |
 | **V/Kp** | testContract **必填**（gate.js:72 对非 R/A/P 门无条件 parse，缺失即 INVALID_TEST_CONTRACT）；Kp 来源 = T 快照链同源重构；V 消费 testContract 且改变 designOnly 路径——**两门细则另案（archive 回退已由本变更 AC-7 交付，另案以其为前置）** | 待实证 | 另案（显式延迟条款） |
 
@@ -101,10 +105,11 @@ archive 回退——archive 搬移变更目录后已录 V pass 会被重验翻�
   + 覆盖矩阵生成（§7 增补 C，投影产物）
   + `--bind-specs`（ID 可解析性，内建非可选）+ 基线互证（contract.dependencyBaselines 内嵌
   pack 规范化 digest——规范化 = 对解析后对象取 canonicalJson，与 envelopeDigest 同源）。
-- **构造期**（gate-bundle，TOCTOU 堵口）：机械复验三件事——(a) contract 内嵌 pack 规范化
+- **构造期**（gate-bundle，TOCTOU 堵口）：机械复验四件事——(a) contract 内嵌 pack 规范化
   digest === 盘上 pack 同式重算（canonicalJson 同源，非「投影输出字节」字面比对）；
-  (b) 重跑 `verifyDomainCaseProjection` 覆盖检查（domain-cases.js 现成导出）；(c) features.md
-  已作为 basis 条目进入投影。任一失败拒绝构造。
+  (b) 重跑 `verifyDomainCaseProjection` 覆盖检查并同式重算矩阵 digest（domain-cases.js
+  现成导出；矩阵 = testPack 内嵌字段，深比较面覆盖内嵌值 + 专属 baselines 条目 (a) 式
+  digest 比对——§7 增补 C）；(c) features.md 已作为 basis 条目进入投影。任一失败拒绝构造。
 - **record 期 sweep**（上游原生）：三 ref 快照逐条哈希比对（classic-application.js:229-243
   原生行为，无需上游改动）。
 
@@ -147,10 +152,17 @@ extensions[同 id].artifactRefs 字符串集合`（形状不同不做 deepEqual�
 固定字段（每行一特性）：`F-ID | 来源引用（design.md 节锚点） | 状态（proposed/covered/
 unresolved）| Journey 维度（A..J 之一）| spec 绑定（晋升后填）`。状态语义澄清（v2.4，
 随 §7 增补 C）：`proposed` = 已登记未覆盖的**编写期状态**，投影前必须转为 covered 或
-显式 unresolved（否则 ：160 拒投影）——编译器可达状态仅 covered/unresolved 二态；
-Journey 维度列**降级为纯分组统计字段，不承载覆盖语义**（绑定唯一键 = Requirement IDs
-→ F-ID，见 §7 增补 C）。每个 F-ID 的验收节强制双轨（≥1 机制 AC + ≥1 体验 QC——
-§7 增补 A）。
+显式 unresolved——**机器侧「显式 unresolved」= ② 变更级 config 的 `unresolved` 数组
+条目（每条含 nonempty `question` 字段，domain-cases.js:140-150）；features.md 状态列
+为登记侧镜像，不被解析**（basis 条目只哈希 features.md 字节，四轮席2 逐字核实全文件
+无解析路径）。编译器可达状态仅 covered/unresolved 二态（:160：已注册 requirement 有
+case 或有 unresolved 条目二选一，否则拒投影）。Journey 维度**列**降级为纯分组统计
+字段，不承载覆盖语义（绑定唯一键 = Requirement IDs → F-ID，见 §7 增补 C；用例
+`Dimensions` **字段**的机检 applicability 语义不受此影响——required 维度零 case 即拒
+投影，domain-cases.js:168，四轮席2 澄清）。每个 F-ID 行下随附**验收节** = 非解析自由
+文本块（编译器只哈希不解析；五固定字段之外，不参与投影——四轮席1 处方），承载
+**约定层强制**双轨（≥1 机制 AC + ≥1 体验 QC——§7 增补 A；「强制」为登记侧治理约定，
+非 :160 式机器强制）。
 
 **机制（采用二轮席2 发现的原生解）**：每个 F-ID 注册为 `kind:'requirement'` 的 basis
 条目（path 同指 features.md，id 唯一）→ domain-cases.js:160 既有「每 requirement 需
@@ -209,8 +221,9 @@ ISO/IEC/IEEE 29148 verifiable 硬属性（AC = 可判定的条件或度量，非
 - 每条 AC/QC 标注 verification route（test / inspection）；测试不可达的验证项显式
   登记兜底路径（inspection/演示）。
 - 不可验证条目不得过 R 门：必须显式 `unresolved`（ISO 29148 verifiable 属性）。
-- 防门槛化（Cohn 反模式警告：DoR 过严退化为 stage-gate 瀑布）：门只查**存在性 +
-  可验证性**，不查措辞完美、不设逐条评审通过才放行。
+- 防门槛化（Cohn 反模式警告：DoR 过严退化为 stage-gate 瀑布）：门只查**存在性**
+  （R 门机器实际查确认收据存在，gate.js:242-243+289；验收节的「可验证性」由评审
+  纪律把关、非机器——四轮席2 措辞澄清），不查措辞完美、不设逐条评审通过才放行。
 - **机械可见性边界（如实）**：features.md 验收节不在编译器解析面内（只哈希不解析，
   §4 已声明同族例外）——双轨性本身不做机器强制，属登记侧治理；机器可见性 = 矩阵
   per-F-ID case 数 + 显式 unresolved 行（§7 增补 C）。
@@ -226,8 +239,11 @@ UAT 证据化签署（已执行场景 + 结论 + known issues 清单 + 显式 go
    <风险>`，30–60 分钟 timebox，验前声明测试数据与环境。charter 不是脚本——把期望
    结果清单塞进 charter 即退化了探索价值。
 2. session sheet 实时记录：时间戳 + BUG/OBSERVATION/QUESTION 三标签；截图挂 check-id。
-3. PROOF debrief 五问：charter 完成度 / 意外发现 / 阻塞 / 后续 charter / 可升级为
-   回归用例的发现。
+3. debrief 五问 = **PROOF 语义的项目裁剪版**（Bach 原典 Past/Results/Outlook/Obstacles/
+   Feelings——四轮席1 外部核对 SBTM 原文；映射：charter 完成度≈Past、意外发现≈Results、
+   阻塞=Obstacles、后续 charter=Outlook、可升级为回归用例的发现**替换** Feelings——
+   锚点强度如实降级，见 consensus-round4.md 来源分级）。timebox 30–60 分钟为项目取值
+   （SBTM 常见 60–90 分钟，同段如实标注）。
 4. **证据三元组纪律**（TestCollab「无上下文截图不算证据」原则，与本仓 Evidence/
    Check ID 字段设计独立契合）：check-id + 期望引用（AC/QC）+ 评审决定，缺任一不算
    证据；每 QC-x 一行（截图 + 结论 pass/fail + 备注）+ **known-issues 显式清单**
@@ -248,10 +264,19 @@ UAT 证据化签署（已执行场景 + 结论 + known issues 清单 + 显式 go
 - **绑定键与分组维度分离**：feature→case 绑定唯一键 = `Requirement IDs → F-ID`
   （§4 requirement-kind basis 机制；:160 检查原生承载 case→feature 方向）；
   **`Dimensions` 降级为纯 Journey 分组统计字段，不承载覆盖语义**（§4 已改）。
-- 编译器**生成** feature-coverage matrix（每已注册 F-ID 一行：case 数 / Acceptance
-  绑定数 / Journey 维度 / level / 状态 covered|unresolved）——矩阵是投影产物，digest
-  随 contract.dependencyBaselines 同链绑定（三 ref 结构不变），进 T 门构造期复验
-  （与 (b) 同式重跑）；**禁止手写矩阵**。
+- 编译器**生成** feature-coverage matrix，**宿主钉死（四轮席2 处方）**：矩阵 =
+  testPack 内嵌生成字段（随既有 `{kind:'domain-cases/v1:testpack'}` envelopeDigest 链
+  携带）+ contract.dependencyBaselines **专属条目** `{kind:
+  'domain-cases/v1:feature-coverage-matrix'}`（digest = envelopeDigest(矩阵对象)——独立
+  可寻址，供 §5 KB 页与下游消费）；domain-cases.js 保留字清单（:124）同步追加该 kind，
+  防 basis id 撞名破坏 gate.js:137-144 单条目消费前提。校验器对内嵌矩阵字段容忍未知
+  字段（contracts/delivery 现行为——首轮席1 finding 7 处置恢复）。每已注册 F-ID 一行：
+  case 数 / Acceptance 绑定数（**= 绑定该 F-ID 的 case 数**，不去重 AC——四轮席3 钉死）
+  / Journey 维度 / level / 状态 covered|unresolved；**unresolved 行的 case 派生字段
+  （Journey 维度/level）置空标 '—'**（无编译器解析面数据源：features.md 只哈希不解析、
+  unresolved config 行只带 requirement_ids+question），字段齐全性按键集判定。矩阵进
+  T 门构造期复验：(b) 深比较面覆盖内嵌字段 + 专属条目 (a) 式 digest 比对；**禁止手写
+  矩阵**（三 ref 结构不变）。
 - 覆盖显式化：:160 强制使「已注册但零覆盖且无 unresolved 条目」不可能静默存在
   （拒投影）——矩阵的 unresolved 行即显式零覆盖（Serenity「no tests」语义的对应物）；
   未注册行不在矩阵作用域（登记侧治理，§4 已声明例外）。proposed 不是投影可达状态
@@ -267,8 +292,8 @@ UAT 证据化签署（已执行场景 + 结论 + known issues 清单 + 显式 go
 - 不修改 @rpamis/comet 运行时（build 相位守卫严格性与 failed-terminal 终态语义维持上游
   设计；revise 命令门 + evidence-last 纪律覆盖；三项 UX 请求已登记上游波次）。
 - 不在本提案内实现 V/Kp 门的工件规格细则（另案，以其为前置）。
-- host-ports verifyDomainAutomation 的 archive 回退**实现属本变更**（§1 对齐工作项，
-  AC-7，scaffold lib 可修）。
+- host-ports verifyDomainAutomation 的 archive 回退**已落地**（8ffcbf2，先于 v2.4——
+  四轮席2 指出原文陈旧，已刷新）；AC-7 剩余 = 在盘回归覆盖确认（§1 对齐段），无新实现。
 - 不做 TestPack 自动化执行态（投影维持 design-only；作者执行来源资格化另案）。
 - 不引入 TestPack v1 之外的新机读**契约**格式（SDD.Delivery.* 契约面不变）；features.md
   为正本侧治理登记表（编译器消费），不属于交付契约面——此为已声明例外。
@@ -284,14 +309,18 @@ UAT 证据化签署（已执行场景 + 结论 + known issues 清单 + 显式 go
   两测）+ `--promote`（delta 合并前拒、合并后晋升成功、重绑 digest 元数据三测）+
   config 两层合并行为三测（同字段冲突 ② 胜 / 仅 ① 回落 / 合并后 F-ID 覆盖强制仍生效），
   合并位置钉死在 compileDomainCases 入参组装处。
-- **AC-1（v2.4 扩）覆盖矩阵生成**：矩阵产物每已注册 F-ID 一行且字段齐全（case 数 /
-  Acceptance 绑定数 / Journey 维度 / level / 状态）两测；unresolved 行显式零覆盖 +
-  covered 行计数正确两测；矩阵 digest 入 contract.dependencyBaselines 一测。
+- **AC-1（v2.4 扩，v2.5 措辞随宿主对齐）覆盖矩阵生成**：矩阵 = testPack 内嵌字段 +
+  dependencyBaselines 专属条目（`kind:'domain-cases/v1:feature-coverage-matrix'`）——
+  内嵌字段每已注册 F-ID 一行且**键集齐全**（case 数 / Acceptance 绑定数〔= 绑定该
+  F-ID 的 case 数〕/ Journey 维度 / level / 状态）两测；unresolved 行 case 派生字段
+  置空 '—' 一测；covered 行计数正确一测；专属条目 digest = envelopeDigest(矩阵) 且
+  保留字清单含该 kind 一测。
 - **AC-2**：gate-bundle T 支持：`--test-contract`/`--feature-map` 注入 + 独立评审绑定补
   contractDigest + outcome.artifactHashes 三 ref 键齐全 + 构造期三件机械复验（baseline
   digest canonicalJson 同源比对 / verifyDomainCaseProjection 重跑 / features basis 校验）
-  各有拒绝路径测试；R/A/P/Kp/V 传入即拒（旗标-门矩阵）各有断言。（v2.4 扩：构造期
-  复验含矩阵 digest 同链复验——与 (b) 同式重跑，拒绝路径一测。）
+  各有拒绝路径测试；R/A/P/Kp/V 传入即拒（旗标-门矩阵）各有断言。（v2.4 扩，v2.5 对齐
+  宿主：构造期复验含矩阵——(b) 深比较覆盖 testPack 内嵌字段 + 专属条目 (a) 式 digest
+  比对，拒绝路径一测。）
 - **AC-3**：T 束三 ref sweep 端到端：composition.extensions 扩三 ref → 官方重编译（应用
   版本递增）→ foundation 重导出 lock（`foundation verify` 通过）→ 重装 →
   extensions↔composition artifactRefs **ref 集合相等断言**（形状不同不做 deepEqual，
@@ -322,7 +351,8 @@ UAT 证据化签署（已执行场景 + 结论 + known issues 清单 + 显式 go
    lock + test/classic-integration.test.js 单 ref 形状断言同步更新（AC-3 前半 +
    AC-6 断言行——三轮席3 finding 6 闭合：断言更新并入本原子变更集，不留红到 step 6）。
 3. gate-bundle T 支持（AC-2/AC-4）——与 2 原子合入。
-4. host-ports verifyDomainAutomation archive 回退（AC-7）。
+4. host-ports verifyDomainAutomation archive 回退——**已落地**（8ffcbf2，18 回归绿）；
+   AC-7 = 在盘确认即闭环；①+② 两文件合并传入随 step 1 落地（席3 观察 O1）。
 5. RUNBOOK/知识库接线（AC-5/AC-6 文档落点全认领：T 门节改写 + R 门双轨 AC 行 + V 门
    charter 行 + AGENTS.md §1/§4 + ③ 易逝性声明 + convergence 文档 T 门交付物行）。
 6. foundation 重冻结 + 全量回归（完成判据：npm test 全绿 + check.sh 通过 +
@@ -331,11 +361,14 @@ UAT 证据化签署（已执行场景 + 结论 + known issues 清单 + 显式 go
    `--upgrade` 安装 → r7 存量迁移（16 case 全字段重写为 domain-cases/v1、TC-14 拆分
    （单 Acceptance 规则）、语义维度映射进 Journey 十键 config、features.md 登记、config
    拆分、KB 页面）→ 在飞 Run（旧包判定，构造期验收 AC-2）与升级后新 Run（record 期验收
-   AC-3 后半）双层验证。
+   AC-3 后半）双层验证。**在飞 Run 须先完成 V/archive 再执行升级安装**（四轮席3 观察
+   O2：任何 compileDomainCases 输出变化——含本变更全部编译器扩展——都会使升级前录制
+   的 contract 在 V 重验 digest 失配翻案）。
 
 ## 下游迁移成本声明（如实）
 
 r7 存量 16 条 case 的迁移 = 一次 T 设计工作重做（全字段重写 + TC-14 拆分 + 维度映射 +
-config 拆分 + features.md + KB 页面），非「补人读字段」。双层验收见实施顺序 7。
+config 拆分 + features.md〔含 v2.4 双轨验收节编写——每 F-ID ≥1 机制 AC + ≥1 体验 QC +
+verification route 标注〕+ KB 页面），非「补人读字段」。双层验收见实施顺序 7。
 revise 重放失败即烧 Run（r6 实证）——回退路径 = 弃 Run 保证据链重跑，已在 RUNBOOK
 RUN_TERMINAL 行声明。
