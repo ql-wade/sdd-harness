@@ -29,11 +29,12 @@ input digests, re-checked by hash comparison at record time. "The agent says it'
 carries no weight here; the evidence chain either holds or the gate refuses.
 
 **People decide, agents work.** You approve requirements, design, test criteria, the
-plan, and the final verification. Driving the run, constructing evidence, recording
-outcomes — all automated.
+plan, and the final verification. Driving the run, constructing evidence, and
+recording outcomes are automated.
 
-**Knowledge converges.** Project closeout (Kp) and team publishing (Kt) turn each
-delivery's lessons into retrievable knowledge instead of tribal memory.
+**Knowledge converges.** Project closeout (Kp) and team publishing (Kt) feed each
+delivery's lessons back into retrievable knowledge, so the same trap is not
+rediscovered on the next change.
 
 **Proven on real deliveries.** Two pilot rounds took real changes through all six
 gates, archive, and Kt. Scope, precisely: the pilots validated the RUNBOOK journey and
@@ -56,8 +57,8 @@ requirements  architecture  test design  planning  implementation  verification 
 | V verification | Did the real thing work, with machine evidence? | pass / repair |
 | Kp closeout | What did this change teach the project? | confirmation |
 
-Each gate is one review step, one evidence bundle, one recorded outcome. A refusal
-loops the change back; nothing advances on a promise.
+Each gate runs one review step and leaves behind one evidence bundle and a recorded
+outcome. A refusal loops the change back.
 
 ## Architecture
 
