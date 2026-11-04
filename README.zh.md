@@ -1,7 +1,3 @@
-<!-- 同步纪律（readme-restructure，2026-11-04）：改 RUNBOOK 第 0-3 步命令、陷阱表、
-     应用版本时，同一次变更里同步下方的快速开始、五入口、文档地图三节。
-     对 README.md 与 README.zh.md 同时适用。 -->
-
 # AI Coding Scaffold（团队 AI 交付脚手架）
 
 [English](README.md) | 中文

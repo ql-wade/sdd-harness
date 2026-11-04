@@ -1,7 +1,3 @@
-<!-- Sync discipline (readme-restructure, 2026-11-04): if you change RUNBOOK steps 0-3,
-     the trap table, or the application version, update Quick start, Entries, and
-     Documentation map below in the same change. Applies to README.md and README.zh.md alike. -->
-
 # AI Coding Scaffold
 
 English | [中文](README.zh.md)

@@ -109,9 +109,10 @@ README 快速开始/五入口/文档地图三节。登记入本 change tasks.md�
 
 ## 非目标
 
-- 不改 FRAMEWORK.md / AGENTS.md / RUNBOOK 正文（理由显式：三者入口职责成立且各有受众；
-  README 侧措辞单方面避让其信号——FRAMEWORK「人类从这里开始」行与工程师入口指 RUNBOOK
-  一致）。重叠处置仅动 README 侧。
+- 不改 FRAMEWORK.md / RUNBOOK 正文（三者入口职责成立且各有受众；README 侧措辞单方面
+  避让其信号）。AGENTS.md 仅增补一行文档同步联动（席位3 finding 4 预留的修正路径：
+  同步纪律需要一个所有者可读的家，AGENTS.md 是 agent 改文档前的必读入口；README 头部
+  HTML 注释形态经项目所有者质疑后废除——渲染不可见、源码首行是内部备注上橱窗，位置错）。
 - 不做多语言平级翻译（中文单主语言；业界模式是平级文件而非文内混排——推断非对标）
 - 不删任何信息（分流而非删除；AC-3 附 at-risk 八项清单逐一保全：tasks.md 指针、
   gate-bundle 指针、state-init 陷阱指针、adapter 扩展句、build 命令+告诫、--with-llmwiki
