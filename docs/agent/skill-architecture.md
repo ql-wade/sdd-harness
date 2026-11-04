@@ -19,7 +19,7 @@
 | 层 | 权威位置 | 作用 | 是否进入 Git |
 | --- | --- | --- | --- |
 | 仓库总约束 | `AGENTS.md` | 范围、事实来源、安全红线、命令和交接 | 是 |
-| 兼容入口 | `CLAUDE.md -> AGENTS.md` | 兼容读取 `CLAUDE.md` 的 agent；不维护第二份规则 | 是 |
+| 兼容入口 | `CLAUDE.md`（内容为 `@AGENTS.md` 导入） | 兼容读取 `CLAUDE.md` 的 agent；不维护第二份规则 | 是 |
 | 原始技能 | `.agents/skills/**/SKILL.md` | 方法论的版本化快照（见 §3） | 是 |
 | 控制平面 | `hooks.yaml` + `hooks/` | agent 原生 hook 的约束/触发策略（见架构文档 §4） | 是 |
 | MCP 能力 | `mcp-capabilities.yaml` + `.mcp.json` | MCP 注册与诚实能力清单 | 是 |
@@ -27,7 +27,7 @@
 | 架构决策 | `docs/architecture/adr/` | 不可逆决策记录 | 是 |
 | 临时执行状态 | `.superpowers/`、`.zcode/`、`.local/`、`.planning/` | 本地 ledger、prompt、截图、调试输出 | 否 |
 
-`.agents/skills/` 是项目级、可审阅、随仓库版本化的技能定义；`CLAUDE.md` 只是指向 `AGENTS.md` 的兼容软链，规范正文以 `AGENTS.md` 和 `.agents/skills/` 为唯一来源。`scripts/agent-skill-check.sh` 校验完整性。
+`.agents/skills/` 是项目级、可审阅、随仓库版本化的技能定义；`CLAUDE.md` 只是内容为 `@AGENTS.md` 导入的兼容入口文件，规范正文以 `AGENTS.md` 和 `.agents/skills/` 为唯一来源。`scripts/agent-skill-check.sh` 校验完整性。
 
 ## 3. 技能清单（基础层）
 

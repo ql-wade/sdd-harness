@@ -27,7 +27,7 @@
 
 ```text
 ┌─────────────────────────────────────────────────────┐
-│ 约定层   AGENTS.md（单一规则入口；CLAUDE.md 软链兼容）  │
+│ 约定层   AGENTS.md（单一规则入口；CLAUDE.md 导入兼容）  │
 ├─────────────────────────────────────────────────────┤
 │ 协作层   docs/agent/（技能触发矩阵、任务交接模板）       │
 ├─────────────────────────────────────────────────────┤
@@ -50,7 +50,7 @@
 ```text
 /（repo root = scaffold = 团队项目模板）
 ├── AGENTS.md                        # 规则骨架：段落固定，内容团队填空
-├── CLAUDE.md -> AGENTS.md           # 兼容软链，check 强制
+├── CLAUDE.md（@AGENTS.md 导入）     # 兼容入口文件，check 强制
 ├── docs/
 │   ├── agent/
 │   │   ├── skill-architecture.md    # 分层表 + 技能职责 + 触发矩阵
@@ -68,7 +68,7 @@
 │       └── claude-code.sh           # CC adapter：hooks.yaml → .claude/settings.json
 ├── scripts/
 │   ├── check.sh                     # 总入口，编排窄检查
-│   ├── agent-instructions-check.sh  # 规则文件完整性 + CLAUDE.md 软链
+│   ├── agent-instructions-check.sh  # 规则文件完整性 + CLAUDE.md 兼容入口
 │   └── agent-skill-check.sh         # 必需技能存在 + 原始技能未被篡改
 ├── bin/cli.js                       # 薄 CLI：init/bootstrap + 验证工具入口
 ├── lib/                             # gate/audit 程序化验证库（见 §7 保留项；现含 delivery/ 与 adapters/ 子模块）

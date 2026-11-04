@@ -18,7 +18,7 @@
 
 本仓库是**团队 AI coding 项目的 scaffold**：统一规则入口 + 方法论技能 + hooks 控制平面 + MCP 能力清单 + 验证工具。不规定工作流（ADR-0015）。
 
-- `AGENTS.md` / `CLAUDE.md -> AGENTS.md`：规则入口（CLAUDE.md 只是兼容软链，check 强制）
+- `AGENTS.md` / `CLAUDE.md`（内容为 `@AGENTS.md` 导入）：规则入口（CLAUDE.md 是兼容入口文件，check 强制）
 - `docs/agent/`：技能触发矩阵、任务交接模板、AGENTS 填空模板
 - `.agents/skills/`：vendored 技能快照（必须为真实目录，禁止符号链接——可移植性红线）
 - `hooks.yaml` + `hooks/`：控制平面策略源与脚本实现
