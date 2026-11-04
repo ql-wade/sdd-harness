@@ -13,7 +13,7 @@ const SHA = /^[0-9a-f]{64}$/;
 const ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const AGENT = /^[0-9a-f]{16,64}$/;
 const LIMIT = 2 * 1024 * 1024;
-const SCAN_LIMIT = 16 * 1024 * 1024;
+const READ_CHUNK = 1024 * 1024;
 const hash = (bytes) => crypto.createHash('sha256').update(bytes).digest('hex');
 const refusal = () => ({ ok: false, scope: 'claude-host-observation', sourceQualified: false, managedClosureEligible: false });
 
@@ -42,19 +42,44 @@ function openTranscript({ sessionPath, transcriptId }) {
     || fs.lstatSync(sessionPath).isSymbolicLink()) return null;
   const fd = fs.openSync(target, fs.constants.O_RDONLY | fs.constants.O_NOFOLLOW);
   const stat = fs.fstatSync(fd);
-  if (!stat.isFile() || stat.size > SCAN_LIMIT) { fs.closeSync(fd); return null; }
-  return { fd, size: stat.size };
+  if (!stat.isFile()) { fs.closeSync(fd); return null; }
+  return { fd };
 }
-function readTranscript({ sessionPath, transcriptId }) {
+// 流式逐行扫描（JSONL）：内存有界（每行 ≤LIMIT，读缓冲 ≤READ_CHUNK），转录任意大小
+// 可遍历——bug#8（sdd-test r7 实证）：宿主转录只增不减，整文件读 + 16MB 上限会把
+// 长会话的全部门收据佐证永久拒绝。锚定语义不变（O_NOFOLLOW fd + realpath projects 根）。
+// onLine 返回 false 时提前停止（调用方命中目标后免扫余文）；返回 false = 打开/扫描失败。
+function scanTranscriptLines({ sessionPath, transcriptId }, onLine) {
   const opened = openTranscript({ sessionPath, transcriptId });
-  if (!opened) return null;
-  const { fd, size } = opened;
+  if (!opened) return false;
+  const { fd } = opened;
   try {
-    const bytes = Buffer.alloc(size);
-    if (fs.readSync(fd, bytes, 0, size, 0) !== size) throw Error('transcript read failed');
-    return bytes;
+    const chunk = Buffer.alloc(READ_CHUNK);
+    let carry = null, pos = 0;
+    for (;;) {
+      const n = fs.readSync(fd, chunk, 0, READ_CHUNK, pos);
+      if (n === 0) break;
+      pos += n;
+      const buf = carry ? Buffer.concat([carry, chunk.subarray(0, n)]) : chunk.subarray(0, n);
+      let from = 0;
+      for (;;) {
+        const end = buf.indexOf(10, from);
+        if (end < 0) break;
+        const line = buf.subarray(from, end);
+        from = end + 1;
+        if (line.length > LIMIT) continue;
+        if (onLine(line) === false) return true;
+      }
+      carry = buf.subarray(from);
+      if (carry.length > LIMIT) carry = null; // 超长单行：与既有逐行 LIMIT 语义一致，弃行
+    }
+    if (carry && carry.length) onLine(carry);
+    return true;
   } finally { fs.closeSync(fd); }
 }
+const parseLine = (line) => {
+  try { return JSON.parse(line.toString('utf8')); } catch { return null; }
+};
 const textOfResult = (block) => Array.isArray(block.content)
   ? block.content.filter((item) => item?.type === 'text').map((item) => item.text).join('\n')
   : typeof block.content === 'string' ? block.content : null;
@@ -64,16 +89,11 @@ const textOfResult = (block) => Array.isArray(block.content)
 export function readClaudeCommandEvent({ sessionPath, transcriptId, commandDigest } = {}) {
   try {
     if (!SHA.test(commandDigest ?? '')) return refusal();
-    const bytes = readTranscript({ sessionPath, transcriptId });
-    if (!bytes) return refusal();
-    let from = 0, toolUse = null, toolResult = null;
-    while (from < bytes.length) {
-      const end = bytes.indexOf(10, from);
-      if (end < 0) break;
-      const line = bytes.subarray(from, end); from = end + 1;
-      if (line.length > LIMIT) continue;
-      let record;
-      try { record = JSON.parse(line.toString('utf8')); } catch { continue; }
+    let toolUse = null, toolResult = null;
+    const found = scanTranscriptLines({ sessionPath, transcriptId }, (line) => {
+      if (toolUse && toolResult !== null) return false; // 命中即停，免扫余文
+      const record = parseLine(line);
+      if (!record) return;
       if (record?.type === 'assistant' && Array.isArray(record.message?.content) && !toolUse) {
         for (const block of record.message.content) {
           if (block?.type === 'tool_use' && block.name === 'Bash' && typeof block.input?.command === 'string'
@@ -85,9 +105,9 @@ export function readClaudeCommandEvent({ sessionPath, transcriptId, commandDiges
           if (block?.type === 'tool_result' && block.tool_use_id === toolUse.id) toolResult = textOfResult(block);
         }
       }
-      if (toolUse && toolResult !== null) break;
-    }
-    if (!toolUse || toolResult === null) return refusal();
+      return toolUse && toolResult !== null ? false : undefined;
+    });
+    if (!found || !toolUse || toolResult === null) return refusal();
     return { ok: true, scope: 'claude-host-observation', sourceQualified: false, managedClosureEligible: false,
       transcriptId, commandDigest, outputDigest: hash(toolResult), output: toolResult };
   } catch { return refusal(); }
@@ -96,24 +116,19 @@ export function readClaudeCommandEvent({ sessionPath, transcriptId, commandDiges
 export function readClaudeStatement({ sessionPath, transcriptId, statementDigest } = {}) {
   try {
     if (!SHA.test(statementDigest ?? '')) return refusal();
-    const bytes = readTranscript({ sessionPath, transcriptId });
-    if (!bytes) return refusal();
-    let from = 0;
-    while (from < bytes.length) {
-      const end = bytes.indexOf(10, from);
-      if (end < 0) break;
-      const line = bytes.subarray(from, end); from = end + 1;
-      if (line.length > LIMIT) continue;
-      let record;
-      try { record = JSON.parse(line.toString('utf8')); } catch { continue; }
-      if (record?.type !== 'assistant' || !Array.isArray(record.message?.content)) continue;
+    let statement = null;
+    const found = scanTranscriptLines({ sessionPath, transcriptId }, (line) => {
+      const record = parseLine(line);
+      if (record?.type !== 'assistant' || !Array.isArray(record.message?.content)) return;
       for (const block of record.message.content) {
         if (block?.type === 'text' && typeof block.text === 'string' && hash(block.text) === statementDigest) {
-          return { ok: true, scope: 'claude-host-observation', sourceQualified: false, managedClosureEligible: false,
-            transcriptId, statementDigest, statement: block.text };
+          statement = block.text;
+          return false; // 命中即停
         }
       }
-    }
-    return refusal();
+    });
+    if (!found || statement === null) return refusal();
+    return { ok: true, scope: 'claude-host-observation', sourceQualified: false, managedClosureEligible: false,
+      transcriptId, statementDigest, statement };
   } catch { return refusal(); }
 }

@@ -1,118 +1,161 @@
 # AI Coding Scaffold
 
-> **人类入口**：受管交付（六门 R→A→T→P→V→Kp）从 [docs/user/RUNBOOK.md](docs/user/RUNBOOK.md)（cookbook）开始——安装应用、一行建 change、在审批点拍板。当前交付实施：[Comet流程与知识收敛架构](docs/architecture/comet-ai-devops-convergence.md) · [唯一任务清单](openspec/changes/delivery-foundation-rearchitecture/tasks.md)。
+English | [中文](README.zh.md)
 
-团队 AI coding 项目的脚手架：**统一规则入口 + 方法论技能 + hooks 控制平面 + MCP 能力清单 + 验证工具**。
+A scaffold for team AI delivery. It gives any repo a shared rulebook, review skills,
+a hook control plane, an honest MCP manifest, and machine-checkable verification —
+plus, if you opt in, a managed delivery workflow that drives every change through six
+gates where people only decide at approval points.
 
-不规定工作流——阶段划分、任务编排、模型选择由执行 agent 和团队自定。scaffold 只提供设施和方法论（[ADR-0015](docs/architecture/adr/0015-scaffold-repositioning.md)）。六门受管交付流程经两轮完整试点实证（六门+归档+Kt 双通道），新项目按 RUNBOOK 复验；框架自身纯净分发，实例验证在实例/证据线。
+Two names used below:
 
-## 分层
+- **Scaffold** — the five facilities listed above. It does not dictate your workflow
+  ([ADR-0015](docs/architecture/adr/0015-scaffold-repositioning.md)).
+- **Managed delivery** — the optional six-gate workflow application. Agents do the
+  work; each gate demands an independent evidence chain before a change moves on.
+
+## Why this architecture
+
+AI agents write code faster than anyone can review it. The failure mode is familiar:
+the agent says "done", the diff looks plausible, and two weeks later nobody can say
+what was actually verified. This scaffold answers with structure, not trust.
+
+**Independent review at every gate.** The author never signs their own work. Each gate
+is a separate review step with its own receipts, evaluated by code rather than by the
+authoring agent's confidence.
+
+**Evidence over claims.** Every gate produces a receipt bundle: HMAC-signed, bound to
+input digests, re-checked by hash comparison at record time. "The agent says it's done"
+carries no weight here; the evidence chain either holds or the gate refuses.
+
+**People decide, agents work.** You approve requirements, design, test criteria, the
+plan, and the final verification. Driving the run, constructing evidence, and
+recording outcomes are automated.
+
+**Knowledge converges.** Project closeout (Kp) and team publishing (Kt) feed each
+delivery's lessons back into retrievable knowledge, so the same trap is not
+rediscovered on the next change.
+
+**Proven on real deliveries.** Two pilot rounds took real changes through all six
+gates, archive, and Kt. Scope, precisely: the pilots validated the RUNBOOK journey and
+its evidence chain; the convergence target architecture is designed, with
+implementation tracked separately.
+
+## The six gates
 
 ```text
-约定层   AGENTS.md（单一规则入口；CLAUDE.md 软链兼容）
-协作层   docs/agent/（技能触发矩阵、任务交接模板）
-技能层   .agents/skills/（vendored 版本化快照）
-控制层   hooks.yaml → adapter → agent 原生 hooks（约束 + 触发）
-工具层   mcp-capabilities.yaml + .mcp.json（诚实能力清单）
-工件层   openspec/ + docs/architecture/adr/
-验证层   lib/ gate/audit 程序化验证 + scripts/check.sh
+R ───► A ───► T ───► P ───► Build ───► V ───► Kp ───► Archive ───► Kt
+requirements  architecture  test design  planning  implementation  verification  closeout  archive  publish
 ```
 
-基础设施分层见 [scaffold-architecture.md](docs/architecture/scaffold-architecture.md)。当前六环节、角色和知识边界统一见 [收敛架构](docs/architecture/comet-ai-devops-convergence.md)；旧AI DevOps、vault与知识蓝图作为历史对照。
+| Gate | Settles the question | Verdicts |
+|---|---|---|
+| R requirements | Is the scope real and agreed? | pass / repair / revise-requirements |
+| A architecture | Is the design sound and independently reviewed? | pass / repair / revise-requirements |
+| T test design | What does "correct" mean, before any code? | pass / repair / revise-requirements |
+| P planning | Is the task DAG buildable in this order? | pass / repair / revise-requirements |
+| V verification | Did the real thing work, with machine evidence? | pass / repair |
+| Kp closeout | What did this change teach the project? | confirmation |
 
-## 基础设施初始化
+Each gate runs one review step and leaves behind one evidence bundle and a recorded
+outcome. A refusal loops the change back.
 
-以下命令只初始化规则、方法与工具；受管交付的安装、资格与恢复按上面的当前执行入口进行。
+## Architecture
 
-```bash
-git clone <本仓库> my-project && cd my-project
-bash tools/bootstrap.sh                # hooks 落地 + skills 注入 + MCP 注册
-bash tools/bootstrap.sh --with-llmwiki # 额外安装 LLMWiki MCP（python venv）
+```text
+convention    AGENTS.md                 the rulebook agents and humans read first
+collaboration docs/agent/               skill trigger matrix, handoff templates
+skills        .agents/skills/           versioned snapshots, vendored
+control       hooks.yaml → adapter → native hooks    policy defined once, compiled per agent
+tools         mcp-capabilities.yaml + .mcp.json      honest capability manifest
+artifacts     openspec/ + docs/architecture/adr/     specs and irreversible decisions
+verification  lib/ + scripts/check.sh                gate/audit regression suite
 ```
 
-然后：
+The control plane works one way: [hooks.yaml](hooks.yaml) defines policy (knowledge-base
+write protection, dangerous-command blocklist, session context injection), adapters
+compile it into each agent's native hooks, and generated artifacts are never hand-edited.
+Adding a new agent means writing one `tools/adapters/<agent>.sh`.
+The managed delivery application lives in
+[integrations/comet/](integrations/comet/application/composition.json): gate validators,
+a six-skill composition, and evidence ports. Full layering:
+[scaffold-architecture.md](docs/architecture/scaffold-architecture.md).
 
-1. 填 `AGENTS.md` 和 `openspec/project.md` 的 `TODO(team)` 内容
-2. `bash scripts/check.sh` 确认骨架完整
-3. 重启 Claude Code 会话，hooks/skills 生效
+## Quick start
 
-## 技能（基础层）
-
-| 技能 | 职责 |
-|------|------|
-| grill-me + grilling | 前置事实质询（一次一问、推荐答案、消除歧义） |
-| whitebox-verify | 三模式验证（调试 / Journey 验收 / Slice TDD） |
-| claude-parallel-tdd-planner | 并行计划协议（DAG / RED-GREEN ledger） |
-| multi-agent-consensus-review | 三方全票共识评审（unanimous gate + evidence-based debate） |
-
-触发矩阵：[docs/agent/skill-architecture.md](docs/agent/skill-architecture.md)。技能以版本化快照 vendor 在 `.agents/skills/`，项目约束不改技能正文。
-
-## 验证工具（lib/ 机械证据层）
+Prerequisites: Node ≥ 18 for the toolchain below. The managed delivery journey needs
+Node ≥ 22.16 (24 works best) and Comet 0.5.1 on PATH. Failure modes are catalogued in
+the RUNBOOK preflight table.
 
 ```bash
-node bin/cli.js test-gate --project . --evidence-dir .sdd/evidence   # 跑测试 + sha256 证据
-node bin/cli.js probe --project . --evidence evidence.json           # probe 证据校验
-node bin/cli.js generation-capture --project . --out before.json     # 测试清单（生成前）
-node bin/cli.js generation-evaluate --project . --before before.json # 测试编写完整性
-node bin/cli.js deliverable-audit --project . --run <id>             # 交付物审计
-node bin/cli.js evidence-audit --project . --change <id>             # 证据审计
-node bin/cli.js workflow-audit --project . --run <id>                # 运行状态审计
-node bin/cli.js wiki init                                            # LLMWiki 骨架 + raw/ 复制
-node bin/cli.js doctor                                               # 环境自检
-```
-
-退出码契约：`0` 通过，`1` 输入无效，`2` 验证不通过。
-
-## MCP 能力清单（诚实标注）
-
-| MCP | status | 说明 |
-|-----|--------|------|
-| chrome-devtools | ready | 浏览器调试 / trace（whitebox-verify 调试模式依赖） |
-| playwright | ready | 浏览器自动化 |
-| github | degraded | 需 `GITHUB_TOKEN`，未配置时降级 |
-| llmwiki | ready | 知识库（需 venv；`bootstrap --with-llmwiki`） |
-
-唯一事实源：[mcp-capabilities.yaml](mcp-capabilities.yaml)。`planned` 状态的 MCP 禁止被文档当作可用。
-
-## Hooks 控制平面
-
-策略定义一次（[hooks.yaml](hooks.yaml)），adapter 落地：
-
-- `kb-write-protection` — 禁止直接写知识库 wiki 落点（`.sdd/wiki/`、`llmwiki/wiki/`，绕过索引），必须走 MCP
-- `dangerous-command-blocklist` — `git push --force` / `git reset --hard` / `rm -rf /` 等禁入
-- `session-context-injection` — SessionStart 注入规则入口 + ADR 索引
-- `stop-sediment-reminder` — Stop 时提醒未沉淀的 findings/ADR
-
-新增 agent 支持 = 写一个 `tools/adapters/<agent>.sh`；首日只实现 Claude Code。
-
-## 受管交付（六门）
-
-安装流程应用 → 建变更目录 → 驱动器起 Run（自动登记归属 + 自举全部状态）→
-沿六门推进，每门强制独立证据链，人只在审批点拍板：
-
-```bash
+git clone <this-repo> my-project && cd my-project   # terminal
+bash tools/bootstrap.sh                             # hooks, skills, MCP registration
+# bash tools/bootstrap.sh --with-llmwiki            # optional: also install the LLMWiki MCP (python venv)
+# fill the TODO(team) blocks in AGENTS.md and openspec/project.md
+bash scripts/check.sh                               # skeleton check
+# restart your Claude Code session — hooks load only at session start
 comet application install <scaffold>/integrations/comet/application/package/application.json \
-  --project "$PWD" --preview --json          # 预览 → 记下 confirmationHash
-mkdir -p openspec/changes/my-change          # 建目录（不要跑 comet state init——见 RUNBOOK 陷阱表）
-export SDD_SESSION_ID="$(uuidgen)"
-bash tools/drive-journey.sh my-change        # 起 Run，自动推进 + 审批点叫你
+  --project "$PWD" --preview --json                 # project root — note the confirmationHash
+comet application install <scaffold>/integrations/comet/application/package/application.json \
+  --confirmation-hash <hash> --project "$PWD"       # project root — actual install
+mkdir -p openspec/changes/my-change                 # no `comet state init`: see RUNBOOK traps
+export SDD_SESSION_ID="$(uuidgen)"                  # the driver requires it
+bash tools/drive-journey.sh my-change               # the Run starts and calls you at gates
+# approve in the driver's own terminal: approved / 同意 / y / yes
 ```
 
-完整步骤、每门交付物与陷阱恢复见 [RUNBOOK](docs/user/RUNBOOK.md)；证据链用
-`tools/gate-bundle.mjs` 构造（六门收据束构造器，预校验不过不落盘）。
+Per-gate deliverables, evidence construction, and trap recovery: the
+[RUNBOOK](docs/user/RUNBOOK.md).
 
-## 开发（本仓库自身）
+## Skills and tools
+
+| Skill | Job |
+|---|---|
+| grill-me + grilling | interrogate facts before design, one question at a time |
+| whitebox-verify | three verification modes: debug, journey acceptance, slice TDD |
+| claude-parallel-tdd-planner | parallel planning protocol: DAG, RED-GREEN ledger |
+| multi-agent-consensus-review | three-seat unanimous review with evidence-based debate |
+
+Trigger matrix: [skill-architecture.md](docs/agent/skill-architecture.md). Verification
+CLI essentials: `node bin/cli.js doctor`, `test-gate`, and `scripts/check.sh`. Exit
+codes: 0 pass, 1 bad input, 2 verification failed. The full command list:
+[docs/reference.md](docs/reference.md).
+
+MCP integrations are declared once in [mcp-capabilities.yaml](mcp-capabilities.yaml) —
+ready, degraded, or planned, and the manifest is the only place that status lives.
+
+## Documentation
+
+| Read | When |
+|---|---|
+| [RUNBOOK](docs/user/RUNBOOK.md) | you are driving a delivery — cookbook plus trap table |
+| [scaffold-architecture.md](docs/architecture/scaffold-architecture.md) | you want the full layered architecture |
+| [convergence](docs/architecture/comet-ai-devops-convergence.md) | the target architecture — design revision done, implementation tracked in the change tasks/DAG |
+| [adr/](docs/architecture/adr/) | irreversible decisions, with reasons |
+| [skill-architecture.md](docs/agent/skill-architecture.md) | how and when skills trigger |
+| [mcp-capabilities.yaml](mcp-capabilities.yaml) | which integrations actually work today |
+| [FRAMEWORK.md](FRAMEWORK.md) | the delivery framework layout and purity rules |
+| [delivery-foundation-rearchitecture](openspec/changes/delivery-foundation-rearchitecture/tasks.md) | current implementation status (tasks, DAG, HANDOFF) |
+| [foundation/](foundation/) | sealed baselines for audit replay |
+| [managed-delivery-quickstart.md](docs/delivery/managed-delivery-quickstart.md) | historical walkthrough from the 2026-10 era — the RUNBOOK is current |
+
+## Need help
+
+Delivery traps and recovery live in the [RUNBOOK trap table](docs/user/RUNBOOK.md)
+(state-init misbinding, failed-terminal runs, authority merge). Questions go to the
+team channel; reproducible problems to the issue tracker.
+
+## Developing this repo
 
 ```bash
 npm install
-npm test               # gate/audit 回归套件
-bash scripts/check.sh  # 总检查（规则层 + 技能层 + 回归 + YAML/JSON）
+npm test               # gate/audit regression suite
+bash scripts/check.sh  # rules + skills + regression + YAML/JSON
+node integrations/comet/application/internal/build-application.mjs --out <new-external-dir>
 ```
 
-Comet 交付应用使用外部安装的 Comet 0.5.1 编译到仓库外的新目录：
+A successful build is not runtime qualification. The compiled application still needs
+a host install and gate-by-gate verification.
 
-```bash
-node integrations/comet/application/internal/build-application.mjs --out /absolute/new-output-directory
-```
-
-这是应用候选构建，实际宿主、门禁和端到端运行需另行验证。
+Repo status, plainly: both CI workflows currently fail on the default branch; badges
+go up when they go green. There is no LICENSE file yet.

@@ -9,6 +9,9 @@
 
 - 开始任务前先读取本文件；修改子目录时同时读取该路径下最近的 `AGENTS.md`。
 - 本文件是活文档：命令、目录职责或架构变化时，在同一变更中更新它。
+- 文档同步联动：改 `docs/user/RUNBOOK.md` 第 0-3 步命令、陷阱表或应用版本时，同一变更
+  内同步 `README.md` / `README.zh.md` 的快速开始、五入口、文档地图三节（2026-11-04
+  readme-restructure 变更确立）。
 - 只修改与当前目标直接相关的文件；不重排、不覆盖用户已有改动。
 
 ## 1. 项目目标与仓库范围
@@ -22,6 +25,11 @@
 - `mcp-capabilities.yaml` / `.mcp.json`：MCP 能力唯一事实源 + 注册产物（无绝对路径、版本 pin）
 - `openspec/`：变更工件
 - `bin/cli.js` + `lib/` + `contracts/`：验证工具薄 CLI 与 gate/audit 机械证据库
+- `tests/domain-cases/`：测试用例活库正本（features.md 特性登记表 + 领域用例 + 库级投影
+  config；跨变更维护，不随 archive 走）。变更级投影配置文件名为 `domain-cases.config.json`
+  （在 `<changeDir>/tests/` 下）；T 门判定快照层 `.sdd/delivery/gates/t/` 为 gitignored
+  易逝层（被下一 Run 同路径覆写、不跨机审计；pack digest 与主机路径绑定，跨机重算不匹配
+  为预期行为）——持久证据角色由变更目录内的 ② 投影产物承担
 - `tools/`：bootstrap、CC adapter、MCP 注册器
 - non-goals：基础层不引入工作流编排/阶段状态机；经 ADR-0019 评审的可选 delivery profile 仅接入 Comet 原控制器，禁止第二主控；不在技能正文里写项目约束；不提交本地产物（`.claude/`、`.sdd/` 等）
 
@@ -68,6 +76,7 @@ bash tools/bootstrap.sh     # hooks 落地 + 技能软链 + MCP 注册（幂等�
 | 技能正文 | 上游（mattpocock/obra）| 不修改 vendored 快照；升级 = 显式替换 + skill-check |
 | 架构决策 | `docs/architecture/adr/` | 不可逆决策必须先有 ADR |
 | 变更工件 | `openspec/changes/<change-id>/` | 高风险变更先提案后实施 |
+| 测试用例库 | `tests/domain-cases/`（features.md 登记表 + 用例 + domain-cases.config.json） | 覆盖矩阵是编译器生成物，禁止手维护；features.md 为登记侧（编译器只哈希不解析） |
 | MCP 供应链 | `tools/register-mcps.mjs` 的 MCP_PINS + bootstrap 的 commit/pip pin | 禁止 @latest / HEAD / 浮动版本 |
 
 领域硬规则：所有相对路径符号链接必须从其所在目录可解析（`.claude/skills/* -> ../../.agents/...`）；分发内容不得引用 `$HOME` 或机器特定路径。

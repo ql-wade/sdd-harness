@@ -72,7 +72,8 @@
 2. major — 步骤③工作量低估 + **r7 实际过 T 的工具变体未回流提交**（已提交工具今天过不了
    T 门——evaluate INVALID_TEST_CONTRACT/TEST_DESIGN_REVIEW_REQUIRED 必拒）。
    v2 处置：What §2 列全改动面（inputs.testContract 注入 + contractDigest 绑定 +
-   artifactHashes 三键）；「r7 差异回流」列为变更输入证据。
+   artifactHashes 三键）；「r7 差异回流」列为变更输入证据。（补注，三轮席3 finding 4：
+   c2e4832 已回流 --test-contract；剩余缺口见 proposal Why §4。）
 3. major — features.md 无格式契约 + 与四套 ID 空间（basis/Journey 十键/AC-x/Check ID）
    关系未定义。
    v2 处置：固定字段格式 + 与 Journey 十键的映射声明（F-ID 特性层覆盖登记，投影十键

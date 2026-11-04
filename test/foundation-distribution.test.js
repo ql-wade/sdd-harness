@@ -1886,3 +1886,24 @@ test('legacy owner cannot acquire a drifted baseline; unchanged owner, second ow
     assert.deepEqual(fs.readFileSync(path.join(runDir,'foundation-lock.json')),originalLock);
   } finally { if(runDir) fs.rmSync(runDir,{recursive:true,force:true});fs.rmSync(root,{recursive:true,force:true}); }
 });
+
+// AC-3（proposal v2.5）：T 三 ref 冻结快照进 composition 权威面——每个扩展的
+// extensions/<id>.json artifactRefs[].ref 集合必须与 composition.extensions 字符串
+// 集合相等（对象形状 vs 字符串形状不同，做集合相等断言而非 deepEqual 对象比较）。
+test('AC-3 ref-set equality: extension artifactRefs[].ref sets equal composition.extensions string sets (T carries three-ref frozen snapshots)', async () => {
+  const composition = JSON.parse(fs.readFileSync(path.join(projectRoot, 'integrations/comet/application/composition.json'), 'utf8'));
+  const declared = composition.composition.extensions;
+  assert.ok(declared.length >= 6, 'six gate extensions declared');
+  const tEntry = declared.find(entry => entry.id === 'test-design-review');
+  assert.deepEqual(tEntry.artifactRefs, [
+    '.sdd/delivery/gates/t/receipt-bundle.json',
+    '.sdd/delivery/gates/t/test-pack.snapshot.json',
+    '.sdd/delivery/gates/t/test-contract.snapshot.json',
+  ], 'T 必绑主工件 = 三 ref 快照（束 + pack 快照 + contract 快照）');
+  assert.equal(composition.package.manifestVersion, '28', '三 ref 扩展随官方重编译版本递增');
+  for (const entry of declared) {
+    const source = JSON.parse(fs.readFileSync(path.join(projectRoot, 'integrations/comet/application/extensions', `${entry.id}.json`), 'utf8'));
+    assert.deepEqual(source.artifactRefs.map(ref => ref.ref).sort(), [...entry.artifactRefs].sort(),
+      `extensions/${entry.id}.json ref 集合必须与 composition.extensions 字符串集合相等`);
+  }
+});

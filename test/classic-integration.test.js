@@ -566,7 +566,15 @@ test('P1_5 assembly: A and T are separate extensions at the same design checkpoi
   const aDeclared = await declared('architecture-consensus');
   const tDeclared = await declared('test-design-review');
   assert.deepEqual(aDeclared.artifactRefs.map((ref) => ref.ref), ['.sdd/delivery/gates/a/receipt-bundle.json']);
-  assert.deepEqual(tDeclared.artifactRefs.map((ref) => ref.ref), ['.sdd/delivery/gates/t/receipt-bundle.json']);
+  // T carries the three-ref frozen-snapshot binding (proposal v2.5 §1/§2/AC-3):
+  // bundle + pack snapshot + contract snapshot at fixed change-independent paths.
+  assert.deepEqual(tDeclared.artifactRefs.map((ref) => ref.ref), [
+    '.sdd/delivery/gates/t/receipt-bundle.json',
+    '.sdd/delivery/gates/t/test-pack.snapshot.json',
+    '.sdd/delivery/gates/t/test-contract.snapshot.json',
+  ]);
+  assert.deepEqual(observed.tArtifactRefs, tDeclared.artifactRefs.map((ref) => ref.ref),
+    'compiled-package probe must record the same three-ref set the source declares');
   assert.deepEqual(aDeclared.validator, { id: 'sdd.delivery.gate.a', version: '1' });
   assert.deepEqual(tDeclared.validator, { id: 'sdd.delivery.gate.t', version: '1' });
   assert.notDeepEqual(aDeclared.artifactRefs, tDeclared.artifactRefs, 'A passing cannot substitute for T and vice versa — the bundles are independent');
