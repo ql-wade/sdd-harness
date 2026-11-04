@@ -83,6 +83,7 @@ verification  lib/ + scripts/check.sh                gate/audit regression suite
 The control plane works one way: [hooks.yaml](hooks.yaml) defines policy (knowledge-base
 write protection, dangerous-command blocklist, session context injection), adapters
 compile it into each agent's native hooks, and generated artifacts are never hand-edited.
+Adding a new agent means writing one `tools/adapters/<agent>.sh`.
 The managed delivery application lives in
 [integrations/comet/](integrations/comet/application/composition.json): gate validators,
 a six-skill composition, and evidence ports. Full layering:
@@ -97,6 +98,7 @@ the RUNBOOK preflight table.
 ```bash
 git clone <this-repo> my-project && cd my-project   # terminal
 bash tools/bootstrap.sh                             # hooks, skills, MCP registration
+# bash tools/bootstrap.sh --with-llmwiki            # optional: also install the LLMWiki MCP (python venv)
 # fill the TODO(team) blocks in AGENTS.md and openspec/project.md
 bash scripts/check.sh                               # skeleton check
 # restart your Claude Code session — hooks load only at session start

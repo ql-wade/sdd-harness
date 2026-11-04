@@ -75,9 +75,10 @@ R ───► A ───► T ───► P ───► Build ───► V
 ```
 
 控制平面单向工作：[hooks.yaml](hooks.yaml) 定义策略（知识库写保护、危险命令黑名单、
-会话上下文注入），adapter 编译成各 agent 的原生 hooks，生成产物一律不手改。受管
-交付应用在 [integrations/comet/](integrations/comet/application/composition.json)：
-门禁校验器、六技能组合、证据端口。完整分层见
+会话上下文注入），adapter 编译成各 agent 的原生 hooks，生成产物一律不手改。新增
+agent 支持 = 写一个 `tools/adapters/<agent>.sh`。受管交付应用在
+[integrations/comet/](integrations/comet/application/composition.json)：门禁校验器、
+六技能组合、证据端口。完整分层见
 [scaffold-architecture.md](docs/architecture/scaffold-architecture.md)。
 
 ## 快速开始
@@ -88,6 +89,7 @@ R ───► A ───► T ───► P ───► Build ───► V
 ```bash
 git clone <本仓库> my-project && cd my-project   # 终端
 bash tools/bootstrap.sh                          # hooks、skills、MCP 注册
+# bash tools/bootstrap.sh --with-llmwiki         # 可选：加装 LLMWiki MCP（python venv）
 # 补齐 AGENTS.md 和 openspec/project.md 里的 TODO(team)
 bash scripts/check.sh                            # 骨架完整性检查
 # 重启 Claude Code 会话——hooks 只在会话启动时加载
