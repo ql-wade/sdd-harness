@@ -16,4 +16,4 @@ node bin/cli.js doctor                                               # 环境自
 ```
 
 机器可读输出加 `--json`。各命令的输入校验与拒绝语义见 `bin/cli.js` 与对应
-lib 模块；本清单由 README 同步纪律维护（改命令面时同步两处）。
+lib 模块。

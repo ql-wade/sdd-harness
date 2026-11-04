@@ -14,9 +14,6 @@ Two names used below:
 - **Managed delivery** — the optional six-gate workflow application. Agents do the
   work; each gate demands an independent evidence chain before a change moves on.
 
-No badges yet: both CI workflows currently fail on the default branch, and they go up
-when they go green. The repo has no LICENSE file yet.
-
 ## Why this architecture
 
 AI agents write code faster than anyone can review it. The failure mode is familiar:
@@ -38,12 +35,10 @@ outcomes — all automated.
 **Knowledge converges.** Project closeout (Kp) and team publishing (Kt) turn each
 delivery's lessons into retrievable knowledge instead of tribal memory.
 
-**Proven on real deliveries.** Two pilot rounds took changes through all six gates,
-archive, and Kt. To be precise about scope: the pilots validated the RUNBOOK journey
-and its evidence chain, not the convergence target architecture (that design is done,
-implementation tracked separately). And this repo holds itself to its own standard —
-the README you are reading went through a three-seat adversarial consensus review that
-caught three factual errors in its first draft.
+**Proven on real deliveries.** Two pilot rounds took real changes through all six
+gates, archive, and Kt. Scope, precisely: the pilots validated the RUNBOOK journey and
+its evidence chain; the convergence target architecture is designed, with
+implementation tracked separately.
 
 ## The six gates
 
@@ -160,3 +155,6 @@ node integrations/comet/application/internal/build-application.mjs --out <new-ex
 
 A successful build is not runtime qualification. The compiled application still needs
 a host install and gate-by-gate verification.
+
+Repo status, plainly: both CI workflows currently fail on the default branch; badges
+go up when they go green. There is no LICENSE file yet.
