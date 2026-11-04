@@ -136,3 +136,20 @@ README 快速开始/五入口/文档地图三节。登记入本 change tasks.md�
   注记、llmwiki ENOENT 类现状如实）
 - **AC-6**（route: inspection）五类读者各自路径从首屏到达入口且走查通过（人工走查，
   决策者/审计两条路径以可读证据文件存在性为准）
+
+## v3 定位决策（项目所有者 2026-11-04 指令）
+
+1. **README = 架构展示页（architecture showcase）**：主目的是宣传并讲清架构本身——六门
+   受管交付、独立证据链、控制平面、知识收敛是主角；快速开始/文档地图降为支撑节（consensus
+   全部事实修正保留）。
+2. **中英双份**：`README.md`（英文，对外宣传主文）+ `README.zh.md`（中文）；顶部语言切换行
+   （opencode/OmO/spec-kit 平级翻译范式）。
+3. **去 AI 味**：英文按 Wikipedia AI-writing signs + blader humanizer 纪律（禁 leverage/
+   seamless/robust/empower 类词、禁三段式填充、克制破折号、具体名词与真实数字替代形容词）；
+   中文按 humanizer-zh 同源纪律（去夸大象征、宣传腔、-ing 肤浅分析、模糊归因、破折号滥用、
+   否定式排比、连接词堆砌）。两份都过双语言自查后才提交。
+4. AC-5 增补：AC-6 route 标注随 v2；本 v3 不改 AC 判据本体（定位与语言是实施约束，非新判据）。
+5. **D5 反转（定位决策推导）**：v2 裁「分层图收敛为指针」基于工具型定位；架构展示页定位下
+   分层图就是架构说明本体——README 承载七层图（英译），细节深链 scaffold-architecture.md；
+   FRAMEWORK.md 保持框架结构/纯净线视角，两处不再重复版本号。
+6. **配套件**：docs/reference.md（D1-A，CLI 完整清单）+ 本 change tasks.md + 双语言切换行。
